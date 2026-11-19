@@ -1,0 +1,71 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
+name: "ucsc_lavtopsl"
+description: Convert LAV alignments (LASTZ, BLASTZ) to PSL with UCSC lavToPsl
+keywords:
+  - lav
+  - psl
+  - conversion
+  - lastz
+  - ucsc
+  - ucsc/lavtopsl
+tools:
+  - ucsc:
+      description: |
+        lavToPsl from the UCSC Genome Browser (kent) utilities converts LAV alignments to PSL. It reads plain
+        or gzipped LAV, also several LAV files joined into one. The module removes the '##' comment lines of
+        lavToPsl, so the PSL holds records only. The match and mismatch counts are estimated from the percent
+        identity of each LAV block.
+      homepage: "https://hgdownload.soe.ucsc.edu/admin/exe/"
+      documentation: "https://genomewiki.ucsc.edu/index.php/Whole_genome_alignment_howto"
+      tool_dev_url: "https://github.com/ucscGenomeBrowser/kent"
+      licence: ["varies; see http://genome.ucsc.edu/license"]
+      identifier: ""
+input:
+  - - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information
+          e.g. `[ id:'target_query' ]`
+    - lav:
+        type: file
+        description: LAV alignments, plain or gzipped
+        pattern: "*.{lav,lav.gz}"
+        ontologies: []
+output:
+  psl:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. `[ id:'target_query' ]`
+      - "*.psl.gz":
+          type: file
+          description: Gzipped PSL alignments
+          pattern: "*.psl.gz"
+          ontologies:
+            - edam: http://edamontology.org/format_3007 # PSL
+  versions_ucsc:
+    - - ${task.process}:
+          type: string
+          description: The name of the process
+      - ucsc:
+          type: string
+          description: The name of the tool
+      - "482":
+          type: string
+          description: The expression to obtain the version of the tool
+topics:
+  versions:
+    - - ${task.process}:
+          type: string
+          description: The name of the process
+      - ucsc:
+          type: string
+          description: The name of the tool
+      - "482":
+          type: string
+          description: The expression to obtain the version of the tool
+authors:
+  - "@da-bar"
+maintainers:
+  - "@da-bar"

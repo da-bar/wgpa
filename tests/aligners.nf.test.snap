@@ -1,0 +1,138 @@
+{
+    "LAST, LASTZ and MUMmer4 pairs - yeast_small": {
+        "content": [
+            {
+                "CONVERT_DELTA2PSL": {
+                    "gawk": "5.3.1"
+                },
+                "LASTZ": {
+                    "lastz": "1.04.60"
+                },
+                "LAST_LASTAL": {
+                    "last": 1652
+                },
+                "LAST_LASTDB": {
+                    "last": 1652
+                },
+                "LAST_MAFCONVERT": {
+                    "last": 1652
+                },
+                "MUMMER4_NUCMER": {
+                    "mummer4": "4.0.1"
+                },
+                "UCSC_AXTCHAIN": {
+                    "ucsc": 482
+                },
+                "UCSC_AXTSORT": {
+                    "ucsc": 482
+                },
+                "UCSC_CHAINMERGESORT": {
+                    "ucsc": 482
+                },
+                "UCSC_CHAINNET": {
+                    "ucsc": 482
+                },
+                "UCSC_CHAINPRENET": {
+                    "ucsc": 482
+                },
+                "UCSC_CHAINSTITCHID": {
+                    "ucsc": 482
+                },
+                "UCSC_FATOTWOBIT": {
+                    "ucsc": 482
+                },
+                "UCSC_LAVTOPSL": {
+                    "ucsc": 482
+                },
+                "UCSC_NETCHAINSUBSET": {
+                    "ucsc": 482
+                },
+                "UCSC_NETSYNTENIC": {
+                    "ucsc": 482
+                },
+                "UCSC_NETTOAXT": {
+                    "ucsc": 482
+                },
+                "UCSC_TWOBITINFO": {
+                    "ucsc": 482
+                },
+                "Workflow": {
+                    "da-bar/wgpa": "v2.0.0dev"
+                }
+            },
+            [
+                "genomes",
+                "genomes/scer_small.2bit",
+                "genomes/scer_small.sizes",
+                "genomes/seub_small.2bit",
+                "genomes/seub_small.sizes",
+                "pipeline_info",
+                "pipeline_info/wgpa_software_versions.yml",
+                "scer_seub_last",
+                "scer_seub_last/alignment",
+                "scer_seub_last/alignment/scer_small_seub_small.maf.gz",
+                "scer_seub_last/alignment/scer_small_seub_small.psl.gz",
+                "scer_seub_last/alignment/scer_small_seub_small.tsv",
+                "scer_seub_last/axt",
+                "scer_seub_last/axt/scer_small_seub_small.net.axt.gz",
+                "scer_seub_last/chains",
+                "scer_seub_last/chains/scer_small_seub_small.all.chain.gz",
+                "scer_seub_last/chains/scer_small_seub_small.all.pre.chain.gz",
+                "scer_seub_last/chains/scer_small_seub_small.chain.gz",
+                "scer_seub_last/liftover",
+                "scer_seub_last/liftover/scer_smallToSeub_small.over.chain.gz",
+                "scer_seub_last/nets",
+                "scer_seub_last/nets/scer_small_seub_small.noClass.net.gz",
+                "scer_seub_last/nets/scer_small_seub_small.query.net.gz",
+                "scer_seub_last/nets/scer_small_seub_small.target.net.gz",
+                "scer_seub_lastz",
+                "scer_seub_lastz/alignment",
+                "scer_seub_lastz/alignment/scer_small_seub_small.psl.gz",
+                "scer_seub_lastz/axt",
+                "scer_seub_lastz/axt/scer_small_seub_small.net.axt.gz",
+                "scer_seub_lastz/chains",
+                "scer_seub_lastz/chains/scer_small_seub_small.all.chain.gz",
+                "scer_seub_lastz/chains/scer_small_seub_small.all.pre.chain.gz",
+                "scer_seub_lastz/chains/scer_small_seub_small.chain.gz",
+                "scer_seub_lastz/liftover",
+                "scer_seub_lastz/liftover/scer_smallToSeub_small.over.chain.gz",
+                "scer_seub_lastz/nets",
+                "scer_seub_lastz/nets/scer_small_seub_small.noClass.net.gz",
+                "scer_seub_lastz/nets/scer_small_seub_small.query.net.gz",
+                "scer_seub_lastz/nets/scer_small_seub_small.target.net.gz",
+                "scer_seub_mummer",
+                "scer_seub_mummer/alignment",
+                "scer_seub_mummer/alignment/scer_small_seub_small.delta.gz",
+                "scer_seub_mummer/alignment/scer_small_seub_small.psl.gz",
+                "scer_seub_mummer/axt",
+                "scer_seub_mummer/axt/scer_small_seub_small.net.axt.gz",
+                "scer_seub_mummer/chains",
+                "scer_seub_mummer/chains/scer_small_seub_small.all.chain.gz",
+                "scer_seub_mummer/chains/scer_small_seub_small.all.pre.chain.gz",
+                "scer_seub_mummer/chains/scer_small_seub_small.chain.gz",
+                "scer_seub_mummer/liftover",
+                "scer_seub_mummer/liftover/scer_smallToSeub_small.over.chain.gz",
+                "scer_seub_mummer/nets",
+                "scer_seub_mummer/nets/scer_small_seub_small.noClass.net.gz",
+                "scer_seub_mummer/nets/scer_small_seub_small.query.net.gz",
+                "scer_seub_mummer/nets/scer_small_seub_small.target.net.gz"
+            ],
+            [
+                "scer_small.2bit:md5,5ba8d3df48e1825947760f9f7119e69d",
+                "scer_small.sizes:md5,90acd33e72cd4ce059a3b7f04cc75b58",
+                "seub_small.2bit:md5,07aad47629b630c27a5fef09f221931e",
+                "seub_small.sizes:md5,1b182cfd4b3986e0a5ca2d2aa00a05d4",
+                "scer_small_seub_small.maf.gz:md5,d8c42bf0686b17ee9c40d84d6d9d9f11",
+                "scer_small_seub_small.psl.gz:md5,6cd0579523b4941880fa24fff7b9425f",
+                "scer_small_seub_small.tsv:md5,f0670c29ea44878c7d7423539c446edc",
+                "scer_small_seub_small.psl.gz:md5,fedc6560c48275954cf8caab199b932a",
+                "scer_small_seub_small.psl.gz:md5,2181dae510b2de310007fbd716861b32"
+            ]
+        ],
+        "timestamp": "2026-11-09T16:31:50.20618739",
+        "meta": {
+            "nf-test": "0.9.5",
+            "nextflow": "25.10.4"
+        }
+    }
+}

@@ -1,0 +1,104 @@
+{
+    "yeast_small": {
+        "content": [
+            {
+                "0": [
+                    [
+                        {
+                            "id": "small"
+                        },
+                        "small.delta.gz:md5,6676f885e3b377c031b5c571bc3b73a7"
+                    ]
+                ],
+                "1": [
+                    [
+                        "MUMMER4_NUCMER",
+                        "mummer4",
+                        "4.0.1"
+                    ]
+                ],
+                "delta": [
+                    [
+                        {
+                            "id": "small"
+                        },
+                        "small.delta.gz:md5,6676f885e3b377c031b5c571bc3b73a7"
+                    ]
+                ],
+                "versions_mummer4": [
+                    [
+                        "MUMMER4_NUCMER",
+                        "mummer4",
+                        "4.0.1"
+                    ]
+                ]
+            }
+        ],
+        "timestamp": "2026-11-09T16:01:19.336723177",
+        "meta": {
+            "nf-test": "0.9.5",
+            "nextflow": "25.10.4"
+        }
+    },
+    "delta_without_header": {
+        "content": [
+            "a925e6983fff3670344320b0903a5aec"
+        ],
+        "timestamp": "2026-11-09T16:01:19.347685761",
+        "meta": {
+            "nf-test": "0.9.5",
+            "nextflow": "25.10.4"
+        }
+    },
+    "yeast_small - stub": {
+        "content": [
+            {
+                "0": [
+                    [
+                        {
+                            "id": "small"
+                        },
+                        "small.delta.gz:md5,d41d8cd98f00b204e9800998ecf8427e"
+                    ]
+                ],
+                "1": [
+                    [
+                        "MUMMER4_NUCMER",
+                        "mummer4",
+                        "4.0.1"
+                    ]
+                ],
+                "delta": [
+                    [
+                        {
+                            "id": "small"
+                        },
+                        "small.delta.gz:md5,d41d8cd98f00b204e9800998ecf8427e"
+                    ]
+                ],
+                "versions_mummer4": [
+                    [
+                        "MUMMER4_NUCMER",
+                        "mummer4",
+                        "4.0.1"
+                    ]
+                ]
+            }
+        ],
+        "timestamp": "2026-11-09T16:01:39.008133775",
+        "meta": {
+            "nf-test": "0.9.5",
+            "nextflow": "25.10.4"
+        }
+    },
+    "yeast_small - gzipped query": {
+        "content": [
+            "a925e6983fff3670344320b0903a5aec"
+        ],
+        "timestamp": "2026-11-09T16:01:30.719093121",
+        "meta": {
+            "nf-test": "0.9.5",
+            "nextflow": "25.10.4"
+        }
+    }
+}

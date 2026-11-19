@@ -33,12 +33,18 @@
                 "errorMessage": "Preset must be one of 'near', 'medium' or 'far', or left empty to use --preset",
                 "meta": ["preset"]
             },
+            "aligner": {
+                "type": "string",
+                "enum": ["last", "lastz", "mummer"],
+                "errorMessage": "Aligner must be one of 'last', 'lastz' or 'mummer', or left empty to use --aligner",
+                "meta": ["aligner"]
+            },
             "alignment": {
                 "type": "string",
                 "format": "file-path",
                 "exists": true,
                 "pattern": "^\\S+\\.(maf|psl)(\\.gz)?$",
-                "errorMessage": "Alignment must be a MAF or PSL file of the query aligned to the target, with extension '.maf' or '.psl', optionally followed by '.gz', and cannot contain spaces; leave it empty to align the pair with LAST"
+                "errorMessage": "Alignment must be a MAF or PSL file of the query aligned to the target, with extension '.maf' or '.psl', optionally followed by '.gz', and cannot contain spaces; leave it empty to align the pair with its aligner"
             }
         },
         "required": ["id", "target", "query"]

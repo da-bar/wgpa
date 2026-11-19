@@ -1,0 +1,180 @@
+nextflow_pipeline {
+
+    name "Test pipeline with the LASTZ and MUMmer4 aligners"
+    script "../main.nf"
+    tag "pipeline"
+    tag "aligners"
+
+    // The pair scer_small -> seub_small (tests/data/yeast_small) three times, with each aligner. --aligner mummer
+    // is the default here; the samplesheet column aligner sets LAST and LASTZ for the other two pairs. Each test
+    // writes its samplesheet to its own launch directory.
+    //
+    // The LAST pair must still give the yeast_small fixtures (the v1.0.0 commands). The PSL files of LASTZ and
+    // MUMmer4 are in the snapshot. The chain, net, axt and liftOver files depend on the platform from axtChain on;
+    // there are no platform references for the LASTZ and MUMmer4 pairs, so the test checks that they are made
+    // and not empty. The delta file of MUMmer4 is left out of the snapshot: nucmer with more than one thread
+    // writes its alignments in a run-dependent order (the PSL made from it is sorted).
+
+    test("LAST, LASTZ and MUMmer4 pairs - yeast_small") {
+
+        when {
+            def samplesheet = new File("${launchDir}/samplesheet_aligners.csv")
+            samplesheet.text = [
+                'id,target,query,preset,aligner',
+                "scer_seub_last,${projectDir}/tests/data/yeast_small/scer_small.fa,${projectDir}/tests/data/yeast_small/seub_small.fa,near,last",
+                "scer_seub_lastz,${projectDir}/tests/data/yeast_small/scer_small.fa,${projectDir}/tests/data/yeast_small/seub_small.fa,near,lastz",
+                "scer_seub_mummer,${projectDir}/tests/data/yeast_small/scer_small.fa,${projectDir}/tests/data/yeast_small/seub_small.fa,near,",
+            ].join('\n') + '\n'
+            params {
+                input   = samplesheet.toString()
+                outdir  = "$outputDir"
+                aligner = 'mummer'
+            }
+        }
+
+        then {
+            def fixtures = "${projectDir}/tests/data/yeast_small"
+            def platform = PlatformReferences.dir(projectDir, 'yeast_small')
+            def stem = 'scer_small_seub_small'
+            def gunzip_md5 = { f ->
+                new java.util.zip.GZIPInputStream(new FileInputStream(f.toString())).withCloseable { gz -> gz.bytes.md5() }
+            }
+            def gunzip_lines = { f ->
+                new java.util.zip.GZIPInputStream(new FileInputStream(f.toString())).withCloseable { gz -> gz.getText('UTF-8').readLines() }
+            }
+            def tasks = workflow.trace.tasks().collect { task -> task.name }
+            def stable_path = getAllFilesFromDir(params.outdir, relative: true, includeDir: true, ignore: ['pipeline_info/*.{html,json,txt}'])
+            def stable_content = getAllFilesFromDir(params.outdir, ignoreFile: 'tests/.nftignore', ignore: ['**/*.delta.gz'])
+            assert workflow.success
+            assertAll(
+                // One task of each aligner, each for its own pair
+                { assert tasks.findAll { name -> name.contains(':LAST_LASTAL') } == [ 'DABAR_WGPA:WGPA:PAIRWISE_ALIGN:LAST_LASTAL (scer_seub_last)' ] },
+                { assert tasks.findAll { name -> name.contains(':LASTZ ') } == [ 'DABAR_WGPA:WGPA:PAIRWISE_ALIGN:LASTZ (scer_seub_lastz 1/1)' ] },
+                { assert tasks.findAll { name -> name.contains(':UCSC_LAVTOPSL') } == [ 'DABAR_WGPA:WGPA:PAIRWISE_ALIGN:UCSC_LAVTOPSL (scer_seub_lastz)' ] },
+                { assert tasks.findAll { name -> name.contains(':MUMMER4_NUCMER') } == [ 'DABAR_WGPA:WGPA:PAIRWISE_ALIGN:MUMMER4_NUCMER (scer_seub_mummer)' ] },
+                { assert tasks.findAll { name -> name.contains(':CONVERT_DELTA2PSL') } == [ 'DABAR_WGPA:WGPA:PAIRWISE_ALIGN:CONVERT_DELTA2PSL (scer_seub_mummer)' ] },
+                { assert tasks.count { name -> name.contains(':UCSC_AXTCHAIN') } == 3 },
+                // Published alignment files of each aligner
+                { assert new File("${params.outdir}/scer_seub_last/alignment").list().sort() == [ "${stem}.maf.gz", "${stem}.psl.gz", "${stem}.tsv" ].collect { name -> name.toString() } },
+                { assert new File("${params.outdir}/scer_seub_lastz/alignment").list().sort() == [ "${stem}.psl.gz" ].collect { name -> name.toString() } },
+                { assert new File("${params.outdir}/scer_seub_mummer/alignment").list().sort() == [ "${stem}.delta.gz", "${stem}.psl.gz" ].collect { name -> name.toString() } },
+                // The LAST pair gives the yeast_small fixtures, also when --aligner names another aligner
+                { assert gunzip_md5("${params.outdir}/scer_seub_last/alignment/${stem}.psl.gz") == path("${fixtures}/small.psl").md5 },
+                { assert gunzip_md5("${params.outdir}/scer_seub_last/chains/${stem}.all.chain.gz") == path("${platform}/small.all.chain").md5 },
+                { assert gunzip_md5("${params.outdir}/scer_seub_last/nets/${stem}.noClass.net.gz") == path("${platform}/small.noClass.net").md5 },
+                // The PSL of LASTZ and MUMmer4: records only, target scer_small (column 14) and query seub_small (column 10)
+                { assert [ 'scer_seub_lastz', 'scer_seub_mummer' ].every { id ->
+                    def lines = gunzip_lines("${params.outdir}/${id}/alignment/${stem}.psl.gz")
+                    lines.size() > 0 && lines.every { line ->
+                        def f = line.split('\t', -1)
+                        f.size() == 21 && f[13] in [ 'BK006935.2', 'BK006936.2' ] && f[9] in [ 'CM003582.1', 'CM003583.1', 'CM003584.1' ]
+                    }
+                } },
+                { assert gunzip_lines("${params.outdir}/scer_seub_mummer/alignment/${stem}.delta.gz")[0] == 'scer_small.fa seub_small.fa' },
+                // Chains, nets, axt and liftOver files of LASTZ and MUMmer4 are made and not empty
+                { assert [ 'scer_seub_lastz', 'scer_seub_mummer' ].every { id ->
+                    gunzip_lines("${params.outdir}/${id}/chains/${stem}.all.chain.gz").any { line -> line.startsWith('chain ') } &&
+                    gunzip_lines("${params.outdir}/${id}/nets/${stem}.noClass.net.gz").any { line -> line.startsWith('net ') } &&
+                    gunzip_lines("${params.outdir}/${id}/axt/${stem}.net.axt.gz").any { line -> line.trim() } &&
+                    gunzip_lines("${params.outdir}/${id}/liftover/scer_smallToSeub_small.over.chain.gz").any { line -> line.startsWith('chain ') }
+                } },
+                { assert snapshot(
+                    // pipeline versions.yml file from which Nextflow version is removed because we test pipelines on multiple Nextflow versions
+                    removeNextflowVersion("$outputDir/pipeline_info/wgpa_software_versions.yml"),
+                    // All stable path name, with a relative path
+                    stable_path,
+                    // All files with stable contents that do not depend on the platform (not the delta file)
+                    PlatformReferences.platformIndependent(stable_content)
+                ).match() }
+            )
+        }
+    }
+
+    test("LASTZ with one task per target sequence - yeast_small") {
+
+        // --lastz_chunk_size 1 puts each target sequence in a task of its own (2 for scer_small). The chunks are
+        // joined in target order, so the PSL is that of the single task of the test above (md5 of the decompressed
+        // PSL, also in that test's snapshot).
+
+        when {
+            def samplesheet = new File("${launchDir}/samplesheet_lastz_chunks.csv")
+            samplesheet.text = [
+                'id,target,query,preset,aligner',
+                "scer_seub_lastz,${projectDir}/tests/data/yeast_small/scer_small.fa,${projectDir}/tests/data/yeast_small/seub_small.fa,near,lastz",
+            ].join('\n') + '\n'
+            params {
+                input            = samplesheet.toString()
+                outdir           = "$outputDir"
+                lastz_chunk_size = 1
+            }
+        }
+
+        then {
+            def gunzip_md5 = { f ->
+                new java.util.zip.GZIPInputStream(new FileInputStream(f.toString())).withCloseable { gz -> gz.bytes.md5() }
+            }
+            def tasks = workflow.trace.tasks().collect { task -> task.name }
+            assert workflow.success
+            assertAll(
+                { assert tasks.findAll { name -> name.contains(':LASTZ ') }.sort() == [
+                    'DABAR_WGPA:WGPA:PAIRWISE_ALIGN:LASTZ (scer_seub_lastz 1/2)',
+                    'DABAR_WGPA:WGPA:PAIRWISE_ALIGN:LASTZ (scer_seub_lastz 2/2)',
+                ] },
+                { assert tasks.count { name -> name.contains(':UCSC_LAVTOPSL') } == 1 },
+                { assert gunzip_md5("${params.outdir}/scer_seub_lastz/alignment/scer_small_seub_small.psl.gz") == 'fedc6560c48275954cf8caab199b932a' }
+            )
+        }
+    }
+
+    test("an alignment input and an aligner in one row are rejected - stub") {
+
+        options "-stub"
+
+        when {
+            def samplesheet = new File("${launchDir}/samplesheet_alignment_aligner.csv")
+            samplesheet.text = [
+                'id,target,query,preset,aligner,alignment',
+                "scer_seub,${projectDir}/tests/data/yeast_small/scer_small.fa,${projectDir}/tests/data/yeast_small/seub_small.fa,near,lastz,${projectDir}/tests/data/yeast_small/small.psl",
+            ].join('\n') + '\n'
+            params {
+                input  = samplesheet.toString()
+                outdir = "$outputDir"
+            }
+        }
+
+        then {
+            def log_text = (workflow.stdout + workflow.stderr).join('\n') + new File("${metaDir}/nextflow.log").text
+            assertAll(
+                { assert workflow.failed },
+                { assert workflow.trace.tasks().size() == 0 },
+                { assert log_text.contains("pair 'scer_seub' has both an alignment and an aligner ('lastz')") }
+            )
+        }
+    }
+
+    test("an unknown aligner is rejected - stub") {
+
+        options "-stub"
+
+        when {
+            def samplesheet = new File("${launchDir}/samplesheet_unknown_aligner.csv")
+            samplesheet.text = [
+                'id,target,query,preset,aligner',
+                "scer_seub,${projectDir}/tests/data/yeast_small/scer_small.fa,${projectDir}/tests/data/yeast_small/seub_small.fa,near,minimap2",
+            ].join('\n') + '\n'
+            params {
+                input  = samplesheet.toString()
+                outdir = "$outputDir"
+            }
+        }
+
+        then {
+            def log_text = (workflow.stdout + workflow.stderr).join('\n')
+            assertAll(
+                { assert workflow.failed },
+                { assert workflow.trace.tasks().size() == 0 },
+                { assert log_text.contains("Entry 1: Error for field 'aligner' (minimap2)") }
+            )
+        }
+    }
+}

@@ -1,0 +1,84 @@
+{
+    "yeast_small - lastz near - stub": {
+        "content": [
+            {
+                "0": [
+                    [
+                        {
+                            "id": "small"
+                        },
+                        "small.psl.gz:md5,d41d8cd98f00b204e9800998ecf8427e"
+                    ]
+                ],
+                "1": [
+                    [
+                        "UCSC_LAVTOPSL",
+                        "ucsc",
+                        "482"
+                    ]
+                ],
+                "psl": [
+                    [
+                        {
+                            "id": "small"
+                        },
+                        "small.psl.gz:md5,d41d8cd98f00b204e9800998ecf8427e"
+                    ]
+                ],
+                "versions_ucsc": [
+                    [
+                        "UCSC_LAVTOPSL",
+                        "ucsc",
+                        "482"
+                    ]
+                ]
+            }
+        ],
+        "timestamp": "2026-11-09T16:31:19.066332365",
+        "meta": {
+            "nf-test": "0.9.5",
+            "nextflow": "25.10.4"
+        }
+    },
+    "yeast_small - lastz near": {
+        "content": [
+            {
+                "0": [
+                    [
+                        {
+                            "id": "small"
+                        },
+                        "small.psl.gz:md5,fedc6560c48275954cf8caab199b932a"
+                    ]
+                ],
+                "1": [
+                    [
+                        "UCSC_LAVTOPSL",
+                        "ucsc",
+                        "482"
+                    ]
+                ],
+                "psl": [
+                    [
+                        {
+                            "id": "small"
+                        },
+                        "small.psl.gz:md5,fedc6560c48275954cf8caab199b932a"
+                    ]
+                ],
+                "versions_ucsc": [
+                    [
+                        "UCSC_LAVTOPSL",
+                        "ucsc",
+                        "482"
+                    ]
+                ]
+            }
+        ],
+        "timestamp": "2026-11-09T16:31:05.306659156",
+        "meta": {
+            "nf-test": "0.9.5",
+            "nextflow": "25.10.4"
+        }
+    }
+}

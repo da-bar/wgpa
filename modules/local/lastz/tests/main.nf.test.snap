@@ -1,0 +1,228 @@
+{
+    "yeast_small - near - one target sequence of two": {
+        "content": [
+            {
+                "0": [
+                    [
+                        {
+                            "id": "small"
+                        },
+                        {
+                            "index": 1,
+                            "count": 2,
+                            "seqs": [
+                                "BK006936.2"
+                            ]
+                        },
+                        "small.lav.gz:md5,a7d32c6a7f4b7ab1dfdb3fc2914cdc6f"
+                    ]
+                ],
+                "1": [
+                    [
+                        "LASTZ",
+                        "lastz",
+                        "1.04.60"
+                    ]
+                ],
+                "lav": [
+                    [
+                        {
+                            "id": "small"
+                        },
+                        {
+                            "index": 1,
+                            "count": 2,
+                            "seqs": [
+                                "BK006936.2"
+                            ]
+                        },
+                        "small.lav.gz:md5,a7d32c6a7f4b7ab1dfdb3fc2914cdc6f"
+                    ]
+                ],
+                "versions_lastz": [
+                    [
+                        "LASTZ",
+                        "lastz",
+                        "1.04.60"
+                    ]
+                ]
+            }
+        ],
+        "timestamp": "2026-11-09T16:30:34.837047275",
+        "meta": {
+            "nf-test": "0.9.5",
+            "nextflow": "25.10.4"
+        }
+    },
+    "yeast_small - near": {
+        "content": [
+            {
+                "0": [
+                    [
+                        {
+                            "id": "small"
+                        },
+                        {
+                            "index": 0,
+                            "count": 1,
+                            "seqs": [
+                                "BK006935.2",
+                                "BK006936.2"
+                            ]
+                        },
+                        "small.lav.gz:md5,595a42487c3898ba03c888512c60a303"
+                    ]
+                ],
+                "1": [
+                    [
+                        "LASTZ",
+                        "lastz",
+                        "1.04.60"
+                    ]
+                ],
+                "lav": [
+                    [
+                        {
+                            "id": "small"
+                        },
+                        {
+                            "index": 0,
+                            "count": 1,
+                            "seqs": [
+                                "BK006935.2",
+                                "BK006936.2"
+                            ]
+                        },
+                        "small.lav.gz:md5,595a42487c3898ba03c888512c60a303"
+                    ]
+                ],
+                "versions_lastz": [
+                    [
+                        "LASTZ",
+                        "lastz",
+                        "1.04.60"
+                    ]
+                ]
+            }
+        ],
+        "timestamp": "2026-11-09T16:30:24.371576175",
+        "meta": {
+            "nf-test": "0.9.5",
+            "nextflow": "25.10.4"
+        }
+    },
+    "yeast_small - near - stub": {
+        "content": [
+            {
+                "0": [
+                    [
+                        {
+                            "id": "small"
+                        },
+                        {
+                            "index": 0,
+                            "count": 1,
+                            "seqs": [
+                                "BK006935.2",
+                                "BK006936.2"
+                            ]
+                        },
+                        "small.lav.gz:md5,d41d8cd98f00b204e9800998ecf8427e"
+                    ]
+                ],
+                "1": [
+                    [
+                        "LASTZ",
+                        "lastz",
+                        "1.04.60"
+                    ]
+                ],
+                "lav": [
+                    [
+                        {
+                            "id": "small"
+                        },
+                        {
+                            "index": 0,
+                            "count": 1,
+                            "seqs": [
+                                "BK006935.2",
+                                "BK006936.2"
+                            ]
+                        },
+                        "small.lav.gz:md5,d41d8cd98f00b204e9800998ecf8427e"
+                    ]
+                ],
+                "versions_lastz": [
+                    [
+                        "LASTZ",
+                        "lastz",
+                        "1.04.60"
+                    ]
+                ]
+            }
+        ],
+        "timestamp": "2026-11-09T16:30:54.336416292",
+        "meta": {
+            "nf-test": "0.9.5",
+            "nextflow": "25.10.4"
+        }
+    },
+    "yeast_small - self-alignment - near": {
+        "content": [
+            {
+                "0": [
+                    [
+                        {
+                            "id": "self"
+                        },
+                        {
+                            "index": 0,
+                            "count": 1,
+                            "seqs": [
+                                "BK006935.2",
+                                "BK006936.2"
+                            ]
+                        },
+                        "self.lav.gz:md5,c8cb6ba64894ca35ee2d9cf14d18214b"
+                    ]
+                ],
+                "1": [
+                    [
+                        "LASTZ",
+                        "lastz",
+                        "1.04.60"
+                    ]
+                ],
+                "lav": [
+                    [
+                        {
+                            "id": "self"
+                        },
+                        {
+                            "index": 0,
+                            "count": 1,
+                            "seqs": [
+                                "BK006935.2",
+                                "BK006936.2"
+                            ]
+                        },
+                        "self.lav.gz:md5,c8cb6ba64894ca35ee2d9cf14d18214b"
+                    ]
+                ],
+                "versions_lastz": [
+                    [
+                        "LASTZ",
+                        "lastz",
+                        "1.04.60"
+                    ]
+                ]
+            }
+        ],
+        "timestamp": "2026-11-09T16:30:44.977018377",
+        "meta": {
+            "nf-test": "0.9.5",
+            "nextflow": "25.10.4"
+        }
+    }
+}

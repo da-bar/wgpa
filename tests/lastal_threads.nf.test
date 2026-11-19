@@ -1,0 +1,38 @@
+nextflow_pipeline {
+
+    name "Test pipeline with lastal on more than one thread"
+    script "../main.nf"
+    tag "pipeline"
+    tag "lastal_threads"
+
+    // A custom config that raises the cpus of LAST_LASTAL (tests/lastal_threads.config: 2) must run, with a warning
+    // that the outputs then depend on the run (conf/modules.config). The outputs are not compared: with lastal -P 2
+    // they change from run to run.
+
+    test("lastal with 2 threads - yeast_small") {
+
+        config "./lastal_threads.config"
+
+        when {
+            def samplesheet = new File("${launchDir}/samplesheet_lastal_threads.csv")
+            samplesheet.text = [
+                'id,target,query,preset',
+                "scer_seub,${projectDir}/tests/data/yeast_small/scer_small.fa,${projectDir}/tests/data/yeast_small/seub_small.fa,near",
+            ].join('\n') + '\n'
+            params {
+                input  = samplesheet.toString()
+                outdir = "$outputDir"
+            }
+        }
+
+        then {
+            def lastal = workflow.trace.tasks().findAll { task -> task.name.contains(':LAST_LASTAL') }
+            assertAll(
+                { assert workflow.success },
+                { assert lastal.size() == 1 },
+                { assert file("${metaDir}/nextflow.log").text.contains("Pair 'scer_seub': lastal runs with 2 threads (-P 2)") },
+                { assert new File("${params.outdir}/scer_seub/nets").list().any { name -> name.endsWith('.noClass.net.gz') } }
+            )
+        }
+    }
+}

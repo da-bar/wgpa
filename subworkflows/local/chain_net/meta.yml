@@ -10,6 +10,7 @@ keywords:
   - whole-genome alignment
   - ucsc
 components:
+  - convert/splitpsl
   - ucsc/axtchain
   - ucsc/chainmergesort
   - ucsc/chainprenet
@@ -36,10 +37,15 @@ input:
         The scoring matrix of each pair's preset, for axtChain -scoreScheme
         Structure: [ val(meta), path(axtchain_matrix) ]
       pattern: "*.axtchain.mat"
+  - chain_chunk_size:
+      type: integer
+      description: |
+        Target and query bases per chaining tile (--chain_chunk_size): above 0 the PSL is split into tiles of target
+        chunks x query chunks, each chained by its own axtChain, and chainMergeSort joins them; 0 runs one axtChain per pair
 output:
   - chain:
       type: file
-      description: "axtChain chains. Structure: [ val(meta), path(chain.gz) ]"
+      description: "axtChain chains, one file per pair, or per tile with chain_chunk_size > 0 (meta.chain_tile). Structure: [ val(meta), path(chain.gz) ]"
       pattern: "*.chain.gz"
   - all_chain:
       type: file

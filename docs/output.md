@@ -38,7 +38,7 @@ In the file names, `<target>` and `<query>` are the genome names: the FASTA file
 The pipeline is built using [Nextflow](https://www.nextflow.io/) and processes data using the following steps:
 
 - [Genomes](#genomes) - 2bit and sizes files of each genome
-- [Alignment](#alignment) - LAST alignments in MAF and PSL format (or the PSL of an alignment input)
+- [Alignment](#alignment) - alignments of LAST (MAF, PSL), LASTZ (PSL) or MUMmer4 (delta, PSL), or the PSL of an alignment input
 - [Chains](#chains) - axtChain chains, merged and filtered
 - [Nets](#nets) - chainNet nets and the syntenic net
 - [Net alignments](#net-alignments) - alignments of the syntenic net in axt format
@@ -70,6 +70,8 @@ Each distinct FASTA file gives one pair of files, however many pairs use it. The
 
 </details>
 
+For a pair aligned with LASTZ (`aligner` `lastz`), `alignment/` holds `<target>_<query>.psl.gz`, the `lavToPsl` conversion of all `lastz` runs of the pair (the LAV files are not published). For a pair aligned with MUMmer4 (`aligner` `mummer`), it holds `<target>_<query>.delta.gz`, the `nucmer` delta file, and `<target>_<query>.psl.gz`, its alignments in PSL format, sorted by position. See [usage](usage.md#aligners).
+
 For a pair that starts from an existing alignment (samplesheet column `alignment`, see [usage](usage.md#starting-from-an-existing-alignment-nf-corepairgenomealign)), `alignment/` holds only `<target>_<query>.psl.gz`, converted from the MAF input; the MAF itself and the `.tsv` statistics are not made. For a PSL input the folder is not made, because the PSL goes to `axtChain` as it is. The other folders are the same as for a pair aligned by the pipeline.
 
 ### Chains
@@ -78,7 +80,7 @@ For a pair that starts from an existing alignment (samplesheet column `alignment
 <summary>Output files</summary>
 
 - `<id>/chains/`
-  - `<target>_<query>.chain.gz`: [chains](https://genome.ucsc.edu/goldenPath/help/chain.html) made by `axtChain` from the PSL alignments, with the preset's options and score scheme.
+  - `<target>_<query>.chain.gz`: [chains](https://genome.ucsc.edu/goldenPath/help/chain.html) made by `axtChain` from the PSL alignments, with the preset's options and score scheme. Not made with `--chain_chunk_size` > 0, where the alignments are chained in tiles and `all.chain` holds all the chains (see the usage docs).
   - `<target>_<query>.all.chain.gz`: all chains, merged and sorted by score with `chainMergeSort` (with one axtChain file this is the same content as the `.chain` file).
   - `<target>_<query>.all.pre.chain.gz`: the chains that can take part in a net, from `chainPreNet`. These are the chains that `netToAxt` uses.
 

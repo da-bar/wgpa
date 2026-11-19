@@ -12,14 +12,19 @@
 
 ## Introduction
 
-**da-bar/wgpa** (whole-genome pairwise alignment) aligns whole genomes pair by pair and turns the alignments into the chains, nets and liftOver files used for comparative genomics. It takes a samplesheet of genome pairs (target and query FASTA files), aligns each query to its target with [LAST](https://gitlab.com/mcfrith/last), and then chains and nets the alignments with the [UCSC kent utilities](https://genome.ucsc.edu/goldenPath/help/chain.html), using the alignment presets of the Bioconductor package [CNEr](https://bioconductor.org/packages/CNEr/). Calling conserved non-coding elements (CNEs) will be added in a later release.
+**da-bar/wgpa** (whole-genome pairwise alignment) aligns whole genomes pair by pair and turns the alignments into the chains, nets and liftOver files used for comparative genomics. It takes a samplesheet of genome pairs (target and query FASTA files), aligns each query to its target with [LAST](https://gitlab.com/mcfrith/last) (or, per pair, with [LASTZ](https://github.com/lastz/lastz) or [MUMmer4](https://github.com/mummer4/mummer)), and then chains and nets the alignments with the [UCSC kent utilities](https://genome.ucsc.edu/goldenPath/help/chain.html), using the alignment presets of the Bioconductor package [CNEr](https://bioconductor.org/packages/CNEr/). Calling conserved non-coding elements (CNEs) will be added in a later release.
 
 Version 2 is a rewrite of [v1.0.0](https://github.com/da-bar/whole_genome_pairwise_alignment/tree/0280044394116c215d12f91ad8d257a77d72dc1e) on the [nf-core](https://nf-co.re/) template. v1.0.0 was a small Nextflow script that called the CNEr R wrappers for one genome pair. v2 runs the same programs with the same command lines, without R. On the v1.0.0 test pair (_Saccharomyces cerevisiae_ target, _S. eubayanus_ query), every file that v1.0.0 also made, the MAF included, is byte-identical to the v1.0.0 file on the same platform once it is decompressed. The chain, net and axt files differ slightly between macOS and Linux, for v1.0.0 as for v2; Linux x86_64 is the reference platform (see [Relation to v1.0.0](#relation-to-v100)).
 
 For each genome pair, the pipeline runs these steps:
 
 1. Genome preparation, once per distinct FASTA file: `faToTwoBit` makes a 2bit file (soft-masking is kept) and `twoBitInfo` makes a sizes file.
-2. Alignment: `lastdb -c` indexes the target genome, once per distinct target FASTA. `lastal` aligns the query with the preset's options and scoring matrix (MAF output). `maf-convert psl` converts the MAF to PSL. A pair can instead start from an existing alignment (samplesheet column `alignment`, a MAF or PSL file, e.g. the many-to-many MAF of [nf-core/pairgenomealign](https://nf-co.re/pairgenomealign)): it skips `lastdb` and `lastal`, its sequence names and lengths are checked against the pair's genomes, and a MAF is converted to PSL.
+2. Alignment, with the pair's aligner (samplesheet column `aligner` or `--aligner`, default `last`; see [Aligners](#aligners)):
+   - LAST: `lastdb -c` indexes the target genome, once per distinct target FASTA. `lastal` aligns the query with the preset's options and scoring matrix (MAF output). `maf-convert psl` converts the MAF to PSL.
+   - LASTZ: `lastz` aligns each query sequence to each target sequence with the preset's CNEr `lastz()` options and matrix (LAV output), and `lavToPsl` converts the alignments to PSL.
+   - MUMmer4: `nucmer` aligns the query to the target (delta output), and the pipeline converts the delta file to PSL.
+
+   A pair can instead start from an existing alignment (samplesheet column `alignment`, a MAF or PSL file, e.g. the many-to-many MAF of [nf-core/pairgenomealign](https://nf-co.re/pairgenomealign)): it skips `lastdb` and `lastal`, its sequence names and lengths are checked against the pair's genomes, and a MAF is converted to PSL.
 3. Chaining and netting: `axtChain` (preset options and score scheme), `chainMergeSort`, `chainPreNet`, `chainNet`, and `netSyntenic` on the target net.
 4. Net alignments: `netToAxt` on the syntenic net and the pre-net chains, then `axtSort`.
 5. liftOver chains (`--liftover`, on by default): `netChainSubset` and `chainStitchId` on the syntenic net and all chains, as in UCSC `doBlastzChainNet.pl`.
@@ -45,6 +50,7 @@ scer_vs_spar,/path/to/S_cerevisiae.fa,/path/to/S_paradoxus.fa.gz,
 | `target`    | Target (reference) genome FASTA: `.fa`, `.fasta` or `.fna`, optionally gzipped (`.gz`).                                                                                                                       |
 | `query`     | Query genome FASTA, same formats as `target`.                                                                                                                                                                 |
 | `preset`    | Optional: `near`, `medium` or `far` (see [Presets](#presets)). An empty value uses `--preset` (default `near`).                                                                                               |
+| `aligner`   | Optional: `last`, `lastz` or `mummer` (see [Aligners](#aligners)). An empty value uses `--aligner` (default `last`). Leave it empty for a pair with an `alignment`.                                          |
 | `alignment` | Optional: an existing alignment of the query to the target, MAF or PSL, optionally gzipped. The pair then skips LAST (see [usage](docs/usage.md#starting-from-an-existing-alignment-nf-corepairgenomealign)). |
 
 A genome can be used in any number of pairs, and as the target of one pair and the query of another; its 2bit, sizes and LAST index files are made only once. The output files are named after the FASTA file names without the extension, as in v1.0.0 (`<target>_<query>.*`), so two different FASTA files must not have the same name (compared ignoring case). A genome can also be aligned to itself; the pipeline then warns that the outputs contain the trivial self-alignment (see [usage](docs/usage.md#samplesheet-input)).
@@ -74,7 +80,36 @@ The presets are the `distance` settings of CNEr (`lastal()` and `axtChain()`). T
 | `medium` | HOXD70                            | `-a 400 -b 30 -e 4500 -s 2 -f 1`  | `-minScore=3000 -linearGap=medium` |
 | `far`    | HOXD55                            | `-a 400 -b 30 -e 6000 -s 2 -f 1`  | `-minScore=5000 -linearGap=loose`  |
 
-Use `near` for closely related genomes and `far` for distant ones. For comparison, UCSC uses the near matrix for human-chimpanzee, HOXD70 (the BLASTZ default) for human-mouse and HOXD55 for more distant pairs such as human-chicken. `lastdb` always runs with `-c` (lowercase, soft-masked sequence is not used for initial matches). v1.0.0 always used `near`.
+For LASTZ pairs, the preset sets the options and matrix of CNEr `lastz()` (the BLASTZ-style options of UCSC's `RunLastzChain_sh.txt`), with the preset's axtChain matrix as the LASTZ matrix (`Q=`), as in CNEr:
+
+| Preset   | lastz options                                              |
+| -------- | ---------------------------------------------------------- |
+| `near`   | `C=0 E=150 H=0 K=4500 L=3000 M=254 O=600 T=2 Y=15000`      |
+| `medium` | `C=0 E=30 H=0 K=3000 L=3000 M=50 O=400 T=1 Y=9400`         |
+| `far`    | `C=0 E=30 H=2000 K=2200 L=6000 M=50 O=400 T=2 Y=3400`      |
+
+MUMmer4 has no CNEr preset: `nucmer` runs with its default options for every preset, and the preset sets only the axtChain options and score scheme. Use `near` for closely related genomes and `far` for distant ones. For comparison, UCSC uses the near matrix for human-chimpanzee, HOXD70 (the BLASTZ default) for human-mouse and HOXD55 for more distant pairs such as human-chicken. `lastdb` always runs with `-c` (lowercase, soft-masked sequence is not used for initial matches). v1.0.0 always used `near`.
+
+### Aligners
+
+The three aligners find homology differently, so they suit different distances (see [usage](docs/usage.md#aligners)). Every aligner's alignments go through the same chaining and netting, so a genome pair can be aligned with each of them, as three rows with different ids, to compare the results:
+
+```csv
+id,target,query,preset,aligner
+scer_seub_last,/path/to/S_cerevisiae.fa,/path/to/S_eubayanus.fa,near,last
+scer_seub_lastz,/path/to/S_cerevisiae.fa,/path/to/S_eubayanus.fa,near,lastz
+scer_seub_mummer,/path/to/S_cerevisiae.fa,/path/to/S_eubayanus.fa,near,mummer
+```
+
+| Aligner  | Commands                                                                                                         | Published in `alignment/` |
+| -------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------- |
+| `last`   | `lastdb -c`, `lastal` (CNEr options and matrix), `maf-convert psl`; the v1.0.0 alignment                         | MAF, PSL, statistics      |
+| `lastz`  | `lastz` per (target sequence, query sequence), as CNEr `lastz()`: on the 2bit files, CNEr options and matrix, `--self --nomirror` for a sequence against itself; `lavToPsl` | PSL                       |
+| `mummer` | MUMmer4 `nucmer` (default options), then delta to PSL                                                             | delta, PSL                |
+
+LASTZ runs in one task per target chromosome (or group of small scaffolds, `--lastz_chunk_size`). LASTZ and MUMmer4 outputs do not depend on the number of tasks or cpus: the LASTZ runs are joined in a fixed order, and the PSL made from the `nucmer` delta file is sorted (only the delta file itself lists the alignments in a run-dependent order with more than one thread).
+
+For large repeat-rich genomes, whose alignments do not fit in memory in one `axtChain`, `--chain_chunk_size` chains them in tiles of target x query sequences and merges the chains (same chains; equal-scoring chains in another order, see [usage](docs/usage.md#chaining-large-genomes---chain_chunk_size)).
 
 ## Pipeline output
 
@@ -126,10 +161,11 @@ If you would like to contribute to this pipeline, please see the [contributing g
 
 ## Third-party software
 
-This pipeline relies on external tools: LAST, the UCSC kent utilities and, for its presets, CNEr. It does not distribute these tools or incorporate their source code; conda environments and containers fetch them from Bioconda and BioContainers. Users are responsible for complying with their licences:
+This pipeline relies on external tools: LAST, LASTZ, MUMmer4, the UCSC kent utilities and, for its presets, CNEr. It does not distribute these tools or incorporate their source code; conda environments and containers fetch them from Bioconda and BioContainers. Users are responsible for complying with their licences:
 
 - **LAST** is used for sequence alignment. Users should comply with the licensing terms of the LAST aligner.
-- **kent utilities** (faToTwoBit, twoBitInfo, axtChain, chainMergeSort, chainPreNet, chainNet, netSyntenic, netToAxt, axtSort, netChainSubset, chainStitchId) are developed by the UCSC Genome Browser group and Jim Kent. Their use, especially commercial use, must comply with the [UCSC licence terms](https://genome.ucsc.edu/license/).
+- **LASTZ** (MIT licence) and **MUMmer4** (Artistic licence 2.0) are optional aligners. Users should comply with their licensing terms.
+- **kent utilities** (faToTwoBit, twoBitInfo, lavToPsl, axtChain, chainMergeSort, chainPreNet, chainNet, netSyntenic, netToAxt, axtSort, netChainSubset, chainStitchId) are developed by the UCSC Genome Browser group and Jim Kent. Their use, especially commercial use, must comply with the [UCSC licence terms](https://genome.ucsc.edu/license/).
 - **CNEr** supplied the alignment presets and scoring matrices. Users should adhere to the terms set by the authors of CNEr.
 
 ## Citations
@@ -139,6 +175,8 @@ This pipeline relies on external tools: LAST, the UCSC kent utilities and, for i
 If you use da-bar/wgpa, please cite the tools it runs:
 
 - LAST: Kiełbasa SM, Wan R, Sato K, Horton P, Frith MC. Adaptive seeds tame genomic sequence comparison. _Genome Res._ 2011;21(3):487-493. doi: [10.1101/gr.113985.110](https://doi.org/10.1101/gr.113985.110).
+- LASTZ (pairs aligned with `lastz`): Harris RS. Improved pairwise alignment of genomic DNA. PhD thesis, The Pennsylvania State University; 2007.
+- MUMmer4 (pairs aligned with `mummer`): Marçais G, Delcher AL, Phillippy AM, Coston R, Salzberg SL, Zimin A. MUMmer4: A fast and versatile genome alignment system. _PLoS Comput Biol._ 2018;14(1):e1005944. doi: [10.1371/journal.pcbi.1005944](https://doi.org/10.1371/journal.pcbi.1005944).
 - Chains and nets: Kent WJ, Baertsch R, Hinrichs A, Miller W, Haussler D. Evolution's cauldron: duplication, deletion, and rearrangement in the mouse and human genomes. _Proc Natl Acad Sci USA._ 2003;100(20):11484-11489. doi: [10.1073/pnas.1932072100](https://doi.org/10.1073/pnas.1932072100).
 - CNEr (presets): Tan G, Polychronopoulos D, Lenhard B. CNEr: A toolkit for exploring extreme noncoding conservation. _PLoS Comput Biol._ 2019;15(8):e1006940. doi: [10.1371/journal.pcbi.1006940](https://doi.org/10.1371/journal.pcbi.1006940).
 

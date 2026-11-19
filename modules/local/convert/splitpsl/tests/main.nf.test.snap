@@ -1,0 +1,98 @@
+{
+    "yeast_small - stub": {
+        "content": [
+            {
+                "0": [
+                    [
+                        {
+                            "id": "small"
+                        },
+                        "empty.psl:md5,d41d8cd98f00b204e9800998ecf8427e"
+                    ]
+                ],
+                "1": [
+                    [
+                        "CONVERT_SPLITPSL",
+                        "gawk",
+                        "5.3.1"
+                    ]
+                ],
+                "psl": [
+                    [
+                        {
+                            "id": "small"
+                        },
+                        "empty.psl:md5,d41d8cd98f00b204e9800998ecf8427e"
+                    ]
+                ],
+                "versions_gawk": [
+                    [
+                        "CONVERT_SPLITPSL",
+                        "gawk",
+                        "5.3.1"
+                    ]
+                ]
+            }
+        ],
+        "timestamp": "2026-11-10T09:54:00.652495565",
+        "meta": {
+            "nf-test": "0.9.5",
+            "nextflow": "25.10.4"
+        }
+    },
+    "yeast_small - one chunk per sequence": {
+        "content": [
+            {
+                "0": [
+                    [
+                        {
+                            "id": "small"
+                        },
+                        [
+                            "t001_q001.psl:md5,fc54c20e3f4f7d74acb96f2922abf604",
+                            "t001_q002.psl:md5,ce290d25040cb37eab41cb17217a04cd",
+                            "t001_q003.psl:md5,7959e178d62fa02b3abb03274f771260",
+                            "t002_q001.psl:md5,d734d57313816c29f7a53df087605d2b",
+                            "t002_q002.psl:md5,16abc65a4153c172ad2de931cf97cf18",
+                            "t002_q003.psl:md5,b6009a31fa288a00b8afdb79f975a567"
+                        ]
+                    ]
+                ],
+                "1": [
+                    [
+                        "CONVERT_SPLITPSL",
+                        "gawk",
+                        "5.3.1"
+                    ]
+                ],
+                "psl": [
+                    [
+                        {
+                            "id": "small"
+                        },
+                        [
+                            "t001_q001.psl:md5,fc54c20e3f4f7d74acb96f2922abf604",
+                            "t001_q002.psl:md5,ce290d25040cb37eab41cb17217a04cd",
+                            "t001_q003.psl:md5,7959e178d62fa02b3abb03274f771260",
+                            "t002_q001.psl:md5,d734d57313816c29f7a53df087605d2b",
+                            "t002_q002.psl:md5,16abc65a4153c172ad2de931cf97cf18",
+                            "t002_q003.psl:md5,b6009a31fa288a00b8afdb79f975a567"
+                        ]
+                    ]
+                ],
+                "versions_gawk": [
+                    [
+                        "CONVERT_SPLITPSL",
+                        "gawk",
+                        "5.3.1"
+                    ]
+                ]
+            }
+        ],
+        "timestamp": "2026-11-10T09:53:25.89377642",
+        "meta": {
+            "nf-test": "0.9.5",
+            "nextflow": "25.10.4"
+        }
+    }
+}
