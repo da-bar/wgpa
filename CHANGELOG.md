@@ -40,6 +40,7 @@ Rewrite of v1.0.0 (commit `0280044`) on the [nf-core](https://nf-co.re/) templat
 
 ### `Fixed`
 
+- A custom config that raised the cpus of LAST_LASTAL (documented in the usage docs) stopped the pipeline: the warning about run-dependent outputs in `conf/modules.config` called `log.warn`, and in a config file `log` is not the Nextflow logger (`No signature of method: groovy.util.ConfigObject.warn()`). The warning now uses the Nextflow logger directly; `tests/lastal_threads.nf.test` runs lastal with 2 threads.
 - The malformed `-linearGapmedium` flag that CNEr adds to axtChain (and axtChain ignores) is no longer passed.
 - `-profile conda` stopped at startup when there was no `conda` executable on `PATH` (for example with only micromamba and `conda.useMicromamba = true`): the conda channel check of the nf-core `utils_nextflow_pipeline` subworkflow passed the exception to `log.debug`, which has no such method. The subworkflow is patched (`subworkflows/nf-core/utils_nextflow_pipeline/utils_nextflow_pipeline.diff`) to log the message, so the pipeline warns "Could not verify conda channel configuration." and runs.
 - Boolean parameters given on the command line, such as `--liftover false`, failed validation with the template's nf-schema 2.5.1, because the Nextflow 26.04 strict syntax parser passes them as strings. nf-schema 2.7.2 casts them to the schema types, and the pipeline reads `--liftover` as a boolean.
