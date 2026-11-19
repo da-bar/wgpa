@@ -1,0 +1,137 @@
+nextflow_process {
+
+    name "Test Process LASTZ"
+    script "../main.nf"
+    process "LASTZ"
+    config "./nextflow.config"
+    tag "modules"
+    tag "modules_local"
+    tag "lastz"
+
+    // In nf-test, ${projectDir} (alias ${baseDir}) is the pipeline root, i.e. the directory holding nf-test.config.
+    // scer_small has 2 sequences and seub_small 3: with both target sequences in the chunk the module runs 6 lastz,
+    // whose LAV it joins in a fixed order (target sequence, then query sequence) whatever the number of cpus.
+
+    test("yeast_small - near") {
+
+        when {
+            process {
+                """
+                input[0] = Channel.of([
+                    [ id:'small' ], // meta map
+                    [ index: 0, count: 1, seqs: [ 'BK006935.2', 'BK006936.2' ] ], // all scer_small sequences
+                    file("${projectDir}/tests/data/yeast_small/scer_small.2bit", checkIfExists: true),
+                    file("${projectDir}/tests/data/yeast_small/seub_small.2bit", checkIfExists: true),
+                    file("${projectDir}/tests/data/yeast_small/seub_small.sizes", checkIfExists: true)
+                ])
+                input[1] = file("${projectDir}/assets/matrices/near.axtchain.mat", checkIfExists: true)
+                """
+            }
+        }
+
+        then {
+            def lav = new java.util.zip.GZIPInputStream(new FileInputStream(process.out.lav[0][2].toString())).withCloseable { gz -> gz.getText('UTF-8') }
+            assertAll(
+                { assert process.success },
+                { assert snapshot(process.out).match() },
+                // One complete LAV per sequence pair, with the CNEr options and matrix, and relative paths only
+                { assert lav.count('# lastz end-of-file') == 6 },
+                { assert lav.contains('lastz.v1.04.60 target/scer_small.2bit query/seub_small.2bit C=0 E=150 H=0 K=4500 L=3000 M=254 O=600 T=2 Y=15000 Q=near.axtchain.mat --format=lav --markend') },
+                { assert !lav.contains(launchDir.toString()) },
+                // Two different genomes: no run is a self-alignment
+                { assert !lav.contains('--self') }
+            )
+        }
+    }
+
+    test("yeast_small - near - one target sequence of two") {
+
+        // The chunk with the second target sequence only: its LAV is the second half of the LAV of the test above,
+        // so the chunks of a pair joined in order give the LAV of the whole pair
+
+        when {
+            process {
+                """
+                input[0] = Channel.of([
+                    [ id:'small' ], // meta map
+                    [ index: 1, count: 2, seqs: [ 'BK006936.2' ] ],
+                    file("${projectDir}/tests/data/yeast_small/scer_small.2bit", checkIfExists: true),
+                    file("${projectDir}/tests/data/yeast_small/seub_small.2bit", checkIfExists: true),
+                    file("${projectDir}/tests/data/yeast_small/seub_small.sizes", checkIfExists: true)
+                ])
+                input[1] = file("${projectDir}/assets/matrices/near.axtchain.mat", checkIfExists: true)
+                """
+            }
+        }
+
+        then {
+            def lav = new java.util.zip.GZIPInputStream(new FileInputStream(process.out.lav[0][2].toString())).withCloseable { gz -> gz.getText('UTF-8') }
+            assertAll(
+                { assert process.success },
+                { assert snapshot(process.out).match() },
+                { assert lav.count('# lastz end-of-file') == 3 },
+                { assert lav.contains('"BK006936.2"') },
+                { assert !lav.contains('"BK006935.2"') }
+            )
+        }
+    }
+
+    test("yeast_small - self-alignment - near") {
+
+        // The same 2bit file on both sides: a sequence against itself runs with --self --nomirror, as in CNEr
+
+        when {
+            process {
+                """
+                input[0] = Channel.of([
+                    [ id:'self' ], // meta map
+                    [ index: 0, count: 1, seqs: [ 'BK006935.2', 'BK006936.2' ] ],
+                    file("${projectDir}/tests/data/yeast_small/scer_small.2bit", checkIfExists: true),
+                    file("${projectDir}/tests/data/yeast_small/scer_small.2bit", checkIfExists: true),
+                    file("${projectDir}/tests/data/yeast_small/scer_small.sizes", checkIfExists: true)
+                ])
+                input[1] = file("${projectDir}/assets/matrices/near.axtchain.mat", checkIfExists: true)
+                """
+            }
+        }
+
+        then {
+            def lav = new java.util.zip.GZIPInputStream(new FileInputStream(process.out.lav[0][2].toString())).withCloseable { gz -> gz.getText('UTF-8') }
+            assertAll(
+                { assert process.success },
+                { assert snapshot(process.out).match() },
+                // 2 x 2 runs: each sequence against itself with --self --nomirror, and against the other one
+                { assert lav.count('# lastz end-of-file') == 4 },
+                { assert lav.count('lastz.v1.04.60 target/scer_small.2bit target/scer_small.2bit --self --nomirror C=0') == 2 },
+                { assert lav.count('lastz.v1.04.60 target/scer_small.2bit query/scer_small.2bit C=0') == 2 }
+            )
+        }
+    }
+
+    test("yeast_small - near - stub") {
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                input[0] = Channel.of([
+                    [ id:'small' ], // meta map
+                    [ index: 0, count: 1, seqs: [ 'BK006935.2', 'BK006936.2' ] ], // all scer_small sequences
+                    file("${projectDir}/tests/data/yeast_small/scer_small.2bit", checkIfExists: true),
+                    file("${projectDir}/tests/data/yeast_small/seub_small.2bit", checkIfExists: true),
+                    file("${projectDir}/tests/data/yeast_small/seub_small.sizes", checkIfExists: true)
+                ])
+                input[1] = file("${projectDir}/assets/matrices/near.axtchain.mat", checkIfExists: true)
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert snapshot(process.out).match() }
+            )
+        }
+    }
+}

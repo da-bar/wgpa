@@ -1,0 +1,89 @@
+nextflow_process {
+
+    name "Test Process UCSC_LAVTOPSL"
+    script "../main.nf"
+    process "UCSC_LAVTOPSL"
+    tag "modules"
+    tag "modules_local"
+    tag "ucsc"
+    tag "ucsc/lavtopsl"
+    tag "lastz"
+
+    // The LAV comes from the LASTZ module (CNEr near options) on the yeast_small fixtures, in two chunks (one per
+    // target sequence), given to lavToPsl in chunk order as in the pipeline
+
+    setup {
+        run("LASTZ") {
+            script "../../../lastz/main.nf"
+            config "../../../lastz/tests/nextflow.config"
+            process {
+                """
+                // The pair in two chunks, one per target sequence
+                input[0] = Channel.of(
+                    [ [ id:'small' ], [ index: 0, count: 2, seqs: [ 'BK006935.2' ] ] ],
+                    [ [ id:'small' ], [ index: 1, count: 2, seqs: [ 'BK006936.2' ] ] ]
+                ).map { meta, chunk -> [
+                    meta,
+                    chunk,
+                    file("${projectDir}/tests/data/yeast_small/scer_small.2bit", checkIfExists: true),
+                    file("${projectDir}/tests/data/yeast_small/seub_small.2bit", checkIfExists: true),
+                    file("${projectDir}/tests/data/yeast_small/seub_small.sizes", checkIfExists: true)
+                ] }
+                input[1] = file("${projectDir}/assets/matrices/near.axtchain.mat", checkIfExists: true)
+                """
+            }
+        }
+    }
+
+    test("yeast_small - lastz near") {
+
+        when {
+            process {
+                """
+                input[0] = LASTZ.out.lav
+                    .map { meta, chunk, lav -> [ meta, [ chunk.index, lav ] ] }
+                    .groupTuple()
+                    .map { meta, chunks -> [ meta, chunks.sort { c -> c[0] }.collect { c -> c[1] } ] }
+                """
+            }
+        }
+
+        then {
+            def lines = new java.util.zip.GZIPInputStream(new FileInputStream(process.out.psl[0][1].toString())).withCloseable { gz -> gz.getText('UTF-8').readLines() }
+            def names = { file -> new File(file).readLines().collect { line -> line.split('\t')[0] } as Set }
+            def target_names = names("${projectDir}/tests/data/yeast_small/scer_small.sizes")
+            def query_names = names("${projectDir}/tests/data/yeast_small/seub_small.sizes")
+            assertAll(
+                { assert process.success },
+                { assert snapshot(process.out).match() },
+                // PSL records only (the '##' lines of lavToPsl are removed), query in column 10 and target in 14
+                { assert lines.size() > 0 },
+                { assert lines.every { line -> line.split('\t', -1).size() == 21 } },
+                { assert lines.every { line -> line.split('\t')[9] in query_names && line.split('\t')[13] in target_names } }
+            )
+        }
+    }
+
+    test("yeast_small - lastz near - stub") {
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                input[0] = LASTZ.out.lav
+                    .map { meta, chunk, lav -> [ meta, [ chunk.index, lav ] ] }
+                    .groupTuple()
+                    .map { meta, chunks -> [ meta, chunks.sort { c -> c[0] }.collect { c -> c[1] } ] }
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert snapshot(process.out).match() }
+            )
+        }
+    }
+}

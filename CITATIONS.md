@@ -14,7 +14,15 @@
 
   > Kiełbasa SM, Wan R, Sato K, Horton P, Frith MC. Adaptive seeds tame genomic sequence comparison. Genome Res. 2011 Mar;21(3):487-493. doi: 10.1101/gr.113985.110. PubMed PMID: 21209072.
 
-- [UCSC chains and nets](https://pubmed.ncbi.nlm.nih.gov/14500911/) (kent utilities: faToTwoBit, twoBitInfo, axtChain, chainMergeSort, chainPreNet, chainNet, netSyntenic, netToAxt, axtSort, netChainSubset, chainStitchId)
+- [LASTZ](https://github.com/lastz/lastz) (optional aligner)
+
+  > Harris RS. Improved pairwise alignment of genomic DNA. PhD thesis, The Pennsylvania State University; 2007.
+
+- [MUMmer4](https://pubmed.ncbi.nlm.nih.gov/29373581/) (optional aligner)
+
+  > Marçais G, Delcher AL, Phillippy AM, Coston R, Salzberg SL, Zimin A. MUMmer4: A fast and versatile genome alignment system. PLoS Comput Biol. 2018 Jan 26;14(1):e1005944. doi: 10.1371/journal.pcbi.1005944. PubMed PMID: 29373581.
+
+- [UCSC chains and nets](https://pubmed.ncbi.nlm.nih.gov/14500911/) (kent utilities: faToTwoBit, twoBitInfo, lavToPsl, axtChain, chainMergeSort, chainPreNet, chainNet, netSyntenic, netToAxt, axtSort, netChainSubset, chainStitchId)
 
   > Kent WJ, Baertsch R, Hinrichs A, Miller W, Haussler D. Evolution's cauldron: duplication, deletion, and rearrangement in the mouse and human genomes. Proc Natl Acad Sci U S A. 2003 Sep 30;100(20):11484-11489. doi: 10.1073/pnas.1932072100. PubMed PMID: 14500911.
 

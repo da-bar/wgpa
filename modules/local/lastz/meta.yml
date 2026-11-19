@@ -1,0 +1,96 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
+name: "lastz"
+description: Align every query sequence to every target sequence with LASTZ, one run per sequence pair, as CNEr lastz()
+keywords:
+  - alignment
+  - whole-genome alignment
+  - lastz
+  - lav
+tools:
+  - lastz:
+      description: |
+        LASTZ aligns DNA sequences with spaced seeds, gap-free and gapped extension (successor of BLASTZ).
+        The module runs one lastz per (target sequence of the chunk, query sequence) on the 2bit files, with task.ext.args
+        (BLASTZ-style options, e.g. the CNEr presets) and Q=<matrix>, in LAV format with --markend; a sequence
+        against itself runs with --self --nomirror. Up to task.cpus runs go at a time; their LAV files are
+        checked for '# lastz end-of-file' and joined in a fixed order, so the output does not depend on task.cpus.
+      homepage: "https://github.com/lastz/lastz"
+      documentation: "https://lastz.github.io/lastz/"
+      tool_dev_url: "https://github.com/lastz/lastz"
+      licence: ["MIT"]
+      identifier: ""
+input:
+  - - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information
+          e.g. `[ id:'target_query' ]`
+    - chunk:
+        type: map
+        description: |
+          The target sequences of this task: `[ index: 0-based chunk number, count: number of chunks of the pair,
+          seqs: [ target sequence names ] ]`
+    - target_twobit:
+        type: file
+        description: Target genome in UCSC 2bit format
+        pattern: "*.2bit"
+        ontologies:
+          - edam: http://edamontology.org/format_3009 # 2bit
+    - query_twobit:
+        type: file
+        description: Query genome in UCSC 2bit format; the same file as the target for a self-alignment
+        pattern: "*.2bit"
+        ontologies:
+          - edam: http://edamontology.org/format_3009 # 2bit
+    - query_sizes:
+        type: file
+        description: Query sequence names and lengths (twoBitInfo), the query sequences to align
+        pattern: "*.sizes"
+        ontologies: []
+  - matrix:
+      type: file
+      description: |
+        Optional LASTZ scoring matrix (Q=): a header line "A C G T" and four rows of scores (the axtChain
+        -scoreScheme format). Pass an empty list `[]` to use the LASTZ default.
+      pattern: "*"
+      ontologies: []
+output:
+  lav:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. `[ id:'target_query' ]`
+      - chunk:
+          type: map
+          description: The chunk input, unchanged
+      - "*.lav.gz":
+          type: file
+          description: Gzipped LAV alignments of the sequence pairs of the chunk
+          pattern: "*.lav.gz"
+          ontologies: []
+  versions_lastz:
+    - - ${task.process}:
+          type: string
+          description: The name of the process
+      - lastz:
+          type: string
+          description: The name of the tool
+      - "lastz --version | sed -n '1s/^lastz (version \\([^ ]*\\) .*/\\1/p'":
+          type: string
+          description: The expression to obtain the version of the tool
+topics:
+  versions:
+    - - ${task.process}:
+          type: string
+          description: The name of the process
+      - lastz:
+          type: string
+          description: The name of the tool
+      - "lastz --version | sed -n '1s/^lastz (version \\([^ ]*\\) .*/\\1/p'":
+          type: string
+          description: The expression to obtain the version of the tool
+authors:
+  - "@da-bar"
+maintainers:
+  - "@da-bar"

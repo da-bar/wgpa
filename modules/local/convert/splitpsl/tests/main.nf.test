@@ -1,0 +1,145 @@
+nextflow_process {
+
+    name "Test Process CONVERT_SPLITPSL"
+    script "../main.nf"
+    process "CONVERT_SPLITPSL"
+    tag "modules"
+    tag "modules_local"
+    tag "convert"
+    tag "convert/splitpsl"
+
+    // yeast_small: small.psl has 648 records, target scer_small (BK006935.2, BK006936.2), query seub_small
+    // (CM003582.1, CM003583.1, CM003584.1)
+
+    test("yeast_small - one chunk per sequence") {
+
+        when {
+            process {
+                """
+                input[0] = Channel.of([
+                    [ id:'small' ], // meta map
+                    file("${projectDir}/tests/data/yeast_small/small.psl", checkIfExists: true),
+                    [ ['BK006935.2'], ['BK006936.2'] ],
+                    [ ['CM003582.1'], ['CM003583.1'], ['CM003584.1'] ]
+                ])
+                """
+            }
+        }
+
+        then {
+            def tiles = process.out.psl[0][1].collect { f -> file(f) }.sort { f -> f.name }
+            def target_of = [ '001': 'BK006935.2', '002': 'BK006936.2' ]
+            def query_of = [ '001': 'CM003582.1', '002': 'CM003583.1', '003': 'CM003584.1' ]
+            def records = tiles.collectMany { f -> f.readLines() }
+            assertAll(
+                { assert process.success },
+                // every record is in the tile of its target and query sequence
+                { assert tiles.every { f ->
+                    def (t, q) = (f.name =~ /^t(\d+)_q(\d+)\.psl$/)[0][1..2]
+                    f.readLines().every { line -> line.split('\t')[13] == target_of[t] && line.split('\t')[9] == query_of[q] }
+                } },
+                // the tiles hold the records of the PSL, each once
+                { assert records.sort() == file("${projectDir}/tests/data/yeast_small/small.psl").readLines().sort() },
+                { assert snapshot(process.out).match() }
+            )
+        }
+    }
+
+    test("yeast_small - grouped chunks") {
+
+        when {
+            process {
+                """
+                input[0] = Channel.of([
+                    [ id:'small' ], // meta map
+                    file("${projectDir}/tests/data/yeast_small/small.psl", checkIfExists: true),
+                    [ ['BK006935.2', 'BK006936.2'] ],
+                    [ ['CM003582.1', 'CM003583.1'], ['CM003584.1'] ]
+                ])
+                """
+            }
+        }
+
+        then {
+            def tiles = process.out.psl[0][1].collect { f -> file(f) }.sort { f -> f.name }
+            assertAll(
+                { assert process.success },
+                { assert tiles.collect { f -> f.name } == [ 't001_q001.psl', 't001_q002.psl' ] },
+                { assert tiles.collectMany { f -> f.readLines() }.sort() == file("${projectDir}/tests/data/yeast_small/small.psl").readLines().sort() }
+            )
+        }
+    }
+
+    test("yeast_small - sequence in no chunk") {
+
+        when {
+            process {
+                """
+                input[0] = Channel.of([
+                    [ id:'small' ], // meta map
+                    file("${projectDir}/tests/data/yeast_small/small.psl", checkIfExists: true),
+                    [ ['BK006935.2'] ],
+                    [ ['CM003582.1', 'CM003583.1', 'CM003584.1'] ]
+                ])
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.failed },
+                { assert file("${metaDir}/nextflow.log").text.contains('ERROR: target sequence BK006936.2 of the PSL is in no chunk') }
+            )
+        }
+    }
+
+    test("no alignments - one empty tile") {
+
+        when {
+            process {
+                """
+                def empty = java.nio.file.Files.createTempFile('nothing', '.psl')
+                input[0] = Channel.of([
+                    [ id:'empty' ], // meta map
+                    file(empty.toString()),
+                    [ ['BK006935.2'] ],
+                    [ ['CM003582.1'] ]
+                ])
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert file(process.out.psl[0][1].toString()).name == 'empty.psl' },
+                { assert file(process.out.psl[0][1].toString()).text == '' }
+            )
+        }
+    }
+
+    test("yeast_small - stub") {
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                input[0] = Channel.of([
+                    [ id:'small' ], // meta map
+                    file("${projectDir}/tests/data/yeast_small/small.psl", checkIfExists: true),
+                    [ ['BK006935.2'], ['BK006936.2'] ],
+                    [ ['CM003582.1'], ['CM003583.1'], ['CM003584.1'] ]
+                ])
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert snapshot(process.out).match() }
+            )
+        }
+    }
+}

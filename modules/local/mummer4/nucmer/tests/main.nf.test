@@ -1,0 +1,96 @@
+nextflow_process {
+
+    name "Test Process MUMMER4_NUCMER"
+    script "../main.nf"
+    process "MUMMER4_NUCMER"
+    config "./nextflow.config"
+    tag "modules"
+    tag "modules_local"
+    tag "mummer4"
+    tag "mummer4/nucmer"
+
+    test("yeast_small") {
+
+        when {
+            process {
+                """
+                input[0] = Channel.of([
+                    [ id:'small' ], // meta map
+                    file("${projectDir}/tests/data/yeast_small/scer_small.fa", checkIfExists: true),
+                    file("${projectDir}/tests/data/yeast_small/seub_small.fa", checkIfExists: true)
+                ])
+                """
+            }
+        }
+
+        then {
+            def lines = new java.util.zip.GZIPInputStream(new FileInputStream(process.out.delta[0][1].toString())).withCloseable { gz -> gz.getText('UTF-8').readLines() }
+            assertAll(
+                { assert process.success },
+                { assert snapshot(process.out).match() },
+                // The first line names the input files, not their paths in the work directory
+                { assert lines[0] == 'scer_small.fa seub_small.fa' },
+                { assert lines[1] == 'NUCMER' },
+                { assert snapshot(lines.drop(1).join('\n').md5()).match('delta_without_header') }
+            )
+        }
+    }
+
+    test("yeast_small - gzipped query") {
+
+        when {
+            // A gzipped copy of the query FASTA in this test's own directory
+            def query_gz = new File("${launchDir}/seub_small.fa.gz")
+            query_gz.withOutputStream { os ->
+                new java.util.zip.GZIPOutputStream(os).withCloseable { gz ->
+                    gz << new File("${projectDir}/tests/data/yeast_small/seub_small.fa").bytes
+                }
+            }
+            process {
+                """
+                input[0] = Channel.of([
+                    [ id:'small' ], // meta map
+                    file("${projectDir}/tests/data/yeast_small/scer_small.fa", checkIfExists: true),
+                    file("${query_gz}", checkIfExists: true)
+                ])
+                """
+            }
+        }
+
+        then {
+            def gunzip_lines = { f -> new java.util.zip.GZIPInputStream(new FileInputStream(f.toString())).withCloseable { gz -> gz.getText('UTF-8').readLines() } }
+            def lines = gunzip_lines(process.out.delta[0][1])
+            assertAll(
+                { assert process.success },
+                // Only the file name in the first line differs from the plain FASTA: the rest of the delta file is that
+                // of the test "yeast_small" (the snapshots of both tests hold the md5 of the lines after the first)
+                { assert lines[0] == 'scer_small.fa seub_small.fa.gz' },
+                { assert snapshot(lines.drop(1).join('\n').md5()).match() }
+            )
+        }
+    }
+
+    test("yeast_small - stub") {
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                input[0] = Channel.of([
+                    [ id:'small' ], // meta map
+                    file("${projectDir}/tests/data/yeast_small/scer_small.fa", checkIfExists: true),
+                    file("${projectDir}/tests/data/yeast_small/seub_small.fa", checkIfExists: true)
+                ])
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert snapshot(process.out).match() }
+            )
+        }
+    }
+}

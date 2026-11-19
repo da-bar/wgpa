@@ -1,0 +1,75 @@
+nextflow_pipeline {
+
+    name "Test pipeline with chaining in tiles (--chain_chunk_size)"
+    script "../main.nf"
+    tag "pipeline"
+    tag "chain_tiles"
+
+    // The LAST pair scer_small -> seub_small (tests/data/yeast_small, preset near) with --chain_chunk_size 1: every
+    // sequence is a chunk of its own, so the PSL is chained in 2 x 3 tiles (target BK006935.2, BK006936.2; query
+    // CM003582.1, CM003583.1, CM003584.1), and chainMergeSort joins them. The chains must be those of the v1.0.0
+    // all.chain of the platform (one axtChain over the pair), apart from their IDs and the order of chains with equal
+    // scores, which the tiles change.
+
+    test("chaining in tiles - yeast_small") {
+
+        when {
+            def samplesheet = new File("${launchDir}/samplesheet_chain_tiles.csv")
+            samplesheet.text = [
+                'id,target,query,preset',
+                "scer_seub,${projectDir}/tests/data/yeast_small/scer_small.fa,${projectDir}/tests/data/yeast_small/seub_small.fa,near",
+            ].join('\n') + '\n'
+            params {
+                input            = samplesheet.toString()
+                outdir           = "$outputDir"
+                chain_chunk_size = 1
+            }
+        }
+
+        then {
+            def fixtures = "${projectDir}/tests/data/yeast_small"
+            def platform = PlatformReferences.dir(projectDir, 'yeast_small')
+            def stem = 'scer_small_seub_small'
+            def gunzip_text = { f ->
+                new java.util.zip.GZIPInputStream(new FileInputStream(f.toString())).withCloseable { gz -> gz.getText('UTF-8') }
+            }
+            // A chain file as a sorted list of chains (header without the ID, then the blocks); and its header lines
+            def chains = { String text ->
+                def list = []
+                text.readLines().findAll { line -> !line.startsWith('#') }.each { line ->
+                    if (line.startsWith('chain ')) {
+                        list << [ line.tokenize(' ')[0..-2].join(' ') ]
+                    } else if (line.trim()) {
+                        list[-1] << line
+                    }
+                }
+                list.collect { chain -> chain.join('\n') }.sort()
+            }
+            def headers = { String text -> text.readLines().findAll { line -> line.startsWith('#') } }
+            def tasks = workflow.trace.tasks().collect { task -> task.name }
+            def all_chain = gunzip_text("${params.outdir}/scer_seub/chains/${stem}.all.chain.gz")
+            def reference = path("${platform}/small.all.chain").text
+            assert workflow.success
+            assertAll(
+                // One split, one axtChain per tile, one chainMergeSort for the pair
+                { assert tasks.count { name -> name.contains(':CONVERT_SPLITPSL') } == 1 },
+                { assert tasks.count { name -> name.contains(':UCSC_AXTCHAIN') } == 6 },
+                { assert tasks.count { name -> name.contains(':UCSC_CHAINMERGESORT') } == 1 },
+                // The alignment is the v1.0.0 one
+                { assert new java.util.zip.GZIPInputStream(new FileInputStream("${params.outdir}/scer_seub/alignment/${stem}.psl.gz")).withCloseable { gz -> gz.bytes.md5() } == path("${fixtures}/small.psl").md5 },
+                // The tile chains are not published; all.chain has the chains of one axtChain over the pair
+                { assert new File("${params.outdir}/scer_seub/chains").list().sort() == [ "${stem}.all.chain.gz", "${stem}.all.pre.chain.gz" ].collect { name -> name.toString() } },
+                { assert chains(all_chain).size() == chains(reference).size() },
+                { assert chains(all_chain) == chains(reference) },
+                // chainMergeSort keeps the header lines of every tile, as UCSC's chainMergeSort does
+                { assert headers(all_chain).unique() == headers(reference) },
+                // chain IDs 1..n in score order (chainMergeSort)
+                { assert all_chain.readLines().findAll { line -> line.startsWith('chain ') }.collect { line -> line.tokenize(' ')[-1] as int } == (1..chains(reference).size()).toList() },
+                // nets, axt and liftOver chains are made
+                { assert gunzip_text("${params.outdir}/scer_seub/nets/${stem}.noClass.net.gz").readLines().any { line -> line.startsWith('net ') } },
+                { assert gunzip_text("${params.outdir}/scer_seub/axt/${stem}.net.axt.gz").readLines().any { line -> line.trim() } },
+                { assert gunzip_text("${params.outdir}/scer_seub/liftover/scer_smallToSeub_small.over.chain.gz").readLines().any { line -> line.startsWith('chain ') } }
+            )
+        }
+    }
+}

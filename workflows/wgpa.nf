@@ -22,8 +22,11 @@ workflow WGPA {
     take:
     ch_samplesheet // channel: [ val(meta), path(target_fasta), path(query_fasta), path(alignment) ], meta = [ id, preset, target_name, query_name ]
                    //          alignment = [] unless the samplesheet gives one; then meta also has alignment_format ('maf' or 'psl')
+                   //          meta.aligner = 'lastz' or 'mummer' for a pair aligned with LASTZ or MUMmer4 (absent for LAST)
     outdir         //  string: output directory
     liftover       // boolean: make liftOver chains
+    lastz_chunk_size //  long: target bases per LASTZ task (--lastz_chunk_size)
+    chain_chunk_size //  long: target and query bases per chaining tile, 0 = no tiles (--chain_chunk_size)
 
     main:
 
@@ -50,23 +53,27 @@ workflow WGPA {
     )
 
     //
-    // SUBWORKFLOW: LAST alignment of the query to the target, MAF and PSL; or the pair's alignment input,
-    // checked against the pair's genomes and converted to PSL
+    // SUBWORKFLOW: alignment of the query to the target with the pair's aligner (LAST, LASTZ or MUMmer4) and
+    // conversion to PSL; or the pair's alignment input, checked against the pair's genomes and converted to PSL.
+    // LASTZ uses the preset's axtChain matrix, as CNEr lastz() does.
     //
     PAIRWISE_ALIGN (
         ch_samplesheet,
         ch_matrices.map { meta, lastal_matrix, _axtchain_matrix -> [ meta, lastal_matrix ] },
-        PREPARE_GENOMES.out.genomes.map { meta, _target_twobit, target_sizes, _query_twobit, query_sizes -> [ meta, target_sizes, query_sizes ] }
+        ch_matrices.map { meta, _lastal_matrix, axtchain_matrix -> [ meta, axtchain_matrix ] },
+        PREPARE_GENOMES.out.genomes,
+        lastz_chunk_size
     )
 
     //
     // SUBWORKFLOW: chains, nets and net alignments (axt). axtChain uses the preset's options and score scheme
-    // for every pair, also for an alignment input.
+    // for every pair, also for an alignment input; with chain_chunk_size > 0 it runs on tiles of the PSL.
     //
     CHAIN_NET (
         PAIRWISE_ALIGN.out.psl,
         PREPARE_GENOMES.out.genomes,
-        ch_matrices.map { meta, _lastal_matrix, axtchain_matrix -> [ meta, axtchain_matrix ] }
+        ch_matrices.map { meta, _lastal_matrix, axtchain_matrix -> [ meta, axtchain_matrix ] },
+        chain_chunk_size
     )
 
     //

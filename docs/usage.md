@@ -8,7 +8,7 @@ da-bar/wgpa aligns genome pairs with LAST and chains and nets the alignments wit
 
 ## Samplesheet input
 
-You will need to create a samplesheet with information about the genome pairs you would like to align before running the pipeline. Use this parameter to specify its location. It has to be a comma-separated file with 3 to 5 columns, and a header row as shown in the examples below.
+You will need to create a samplesheet with information about the genome pairs you would like to align before running the pipeline. Use this parameter to specify its location. It has to be a comma-separated file with 3 to 6 columns, and a header row as shown in the examples below.
 
 ```bash
 --input '[path to samplesheet file]'
@@ -27,7 +27,8 @@ seub_vs_scer,/data/genomes/S_eubayanus.fa,/data/genomes/S_cerevisiae.fa,near
 | `target`    | Target genome FASTA file, with the extension `.fa`, `.fasta` or `.fna`, optionally followed by `.gz`.                                                                                                                                                                                                                                 |
 | `query`     | Query genome FASTA file, same formats as `target`.                                                                                                                                                                                                                                                                                    |
 | `preset`    | Optional. `near`, `medium` or `far` (see [Presets](#presets)). Leave it empty, or leave the column out, to use `--preset`.                                                                                                                                                                                                            |
-| `alignment` | Optional. An existing alignment of the query to the target: a MAF or PSL file (`.maf`, `.psl`, optionally followed by `.gz`). The pair then skips LAST; see [Starting from an existing alignment](#starting-from-an-existing-alignment-nf-corepairgenomealign). Leave it empty, or leave the column out, to align the pair with LAST. |
+| `aligner`   | Optional. `last`, `lastz` or `mummer` (see [Aligners](#aligners)). Leave it empty, or leave the column out, to use `--aligner` (default `last`). Must be empty for a pair with an `alignment`.                                                                                                                                         |
+| `alignment` | Optional. An existing alignment of the query to the target: a MAF or PSL file (`.maf`, `.psl`, optionally followed by `.gz`). The pair is then not aligned; see [Starting from an existing alignment](#starting-from-an-existing-alignment-nf-corepairgenomealign). Leave it empty, or leave the column out, to align the pair with its aligner. |
 
 An [example samplesheet](../assets/samplesheet.csv) has been provided with the pipeline.
 
@@ -36,7 +37,7 @@ Notes:
 - Pair ids can contain letters, digits, `.`, `_` and `-`, and must start with a letter or digit. `genomes` and `pipeline_info` (in any case) are not allowed, because they are the pipeline's own output folders. Two ids must differ in more than case (`pairA` and `paira` are rejected), because on a case-insensitive file system, such as the macOS default, they would share one folder.
 - The genome name is the FASTA file name without `.fa`, `.fasta` or `.fna` (and `.gz`), as in v1.0.0. The output files of a pair are named `<target name>_<query name>.*`, and the 2bit and sizes files `<genome name>.2bit` and `.sizes`. Two different FASTA files with the same name (for example `/a/genome.fa` and `/b/genome.fa`), or with names that differ only in case (`genome.fa` and `Genome.fa`), are therefore rejected; rename one of them.
 - A FASTA file can appear in any number of rows, as target in one pair and as query in another. The pipeline makes its 2bit and sizes files once, and one LAST index per distinct target FASTA of the pairs that it aligns with LAST.
-- Lowercase (soft-masked) bases are kept in the 2bit files and are excluded from the initial LAST matches (`lastdb -c`), so soft-mask repeats before running the pipeline, as for v1.0.0.
+- Lowercase (soft-masked) bases are kept in the 2bit files and are excluded from the initial LAST matches (`lastdb -c`), so soft-mask repeats before running the pipeline, as for v1.0.0. LASTZ reads the 2bit files and, like `lastdb -c`, excludes lowercase bases from its seeds but not from the extension of alignments; MUMmer4 `nucmer` ignores case, so soft-masking has no effect on its alignments (hard-mask repeats to exclude them).
 - The sequence names are the first word of each FASTA header.
 - A genome can be aligned to itself (the same file as target and query). The pipeline then prints a warning, because the chains, nets, axt files and liftOver chains contain the trivial alignment of each sequence to itself (the diagonal). The pipeline does not remove it; UCSC self-alignments need extra steps that the pipeline does not do.
 
@@ -53,6 +54,42 @@ The presets are the `distance` settings of CNEr's `lastal()` and `axtChain()` fu
 The matrices are in [`assets/matrices`](../assets/matrices) (`<preset>.lastal.mat` and `<preset>.axtchain.mat`); they are the matrices that CNEr 1.46.0 `scoringMatrix()` writes. The target is always indexed with `lastdb -c`.
 
 `--preset` (default `near`, the only preset of v1.0.0) sets the preset of the pairs whose `preset` value is empty.
+
+## Aligners
+
+Each pair is aligned with one aligner: the samplesheet column `aligner`, or `--aligner` (default `last`) for the pairs whose column is empty. The chaining, netting and liftOver steps are the same for every aligner, and use the preset's axtChain options and score scheme.
+
+| Aligner  | How it finds alignments                                                                                                                                                                  | Suited to                                                                       |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `last`   | Adaptive seeds from a suffix array of the target (`lastdb`): variable-length matches that occur at most a few times, so repeats are handled cheaply; gapped extension with the preset's matrix. | Close to distant genomes; the v1.0.0 alignment.                                 |
+| `lastz`  | Spaced seeds (12 of 19 positions) that may contain transitions, ungapped then gapped extension with the preset's matrix, optional interpolation between alignments (`H=`).                | Mid to distant genomes (human-mouse, human-chicken); the UCSC chain/net input. |
+| `mummer` | Exact matches of at least 20 bp that are unique in the target, clustered and extended by dynamic programming between them.                                                                | Closely related genomes (roughly above 90% identity): strains, assemblies.      |
+
+**LAST** runs as in v1.0.0 (see [Presets](#presets)).
+
+**LASTZ** runs as CNEr `lastz()`: one `lastz` for each pair of a target sequence and a query sequence, on the 2bit files (`target.2bit/<sequence>`), with the preset's options (BLASTZ-style, taken by CNEr from UCSC's `RunLastzChain_sh.txt`) and the preset's matrix (`Q=`, the axtChain matrix of the preset, as in CNEr), in LAV format with `--markend`. A sequence against itself (a self-alignment pair) runs with `--self --nomirror`, as in CNEr. The work of a pair is split into tasks by target sequence (`--lastz_chunk_size`, default 10 Mb): a target sequence of at least that size is a task of its own, and consecutive shorter ones, such as unplaced scaffolds, are grouped up to that size. Each task runs its target sequences against every query sequence, up to `cpus` lastz at a time, and checks that each one finished (`# lastz end-of-file`). The tasks are joined back in target order and converted with `lavToPsl`, so the PSL is the same whatever the chunk size and the number of cpus (checked on the yeast test pair with 1, 2 and 16 tasks). The PSL holds alignment records only; its match and mismatch counts are estimates from the percent identity of each LAV block (axtChain scores the blocks from the sequences). The number of lastz runs is the product of the two sequence counts, so scaffold-level assemblies make many short runs; leave out unplaced scaffolds if they are not needed.
+
+| Preset   | lastz options                                         |
+| -------- | ----------------------------------------------------- |
+| `near`   | `C=0 E=150 H=0 K=4500 L=3000 M=254 O=600 T=2 Y=15000` |
+| `medium` | `C=0 E=30 H=0 K=3000 L=3000 M=50 O=400 T=1 Y=9400`    |
+| `far`    | `C=0 E=30 H=2000 K=2200 L=6000 M=50 O=400 T=2 Y=3400` |
+
+`C=0` no chaining (axtChain chains), `E`/`O` gap extension/open penalties, `H` interpolation threshold (0: off), `K` HSP threshold, `L` gapped extension threshold, `M` dynamic masking count, `T=1` 12-of-19 seed in which one match position may be a transition, `T=2` the same seed without transitions, `Y` gapped extension drop-off.
+
+**MUMmer4** runs `nucmer` with its default options for every preset (anchors unique in the target, `-l 20`, `-c 65`, `-b 200`, both strands), with `cpus` threads, on the FASTA files. The pipeline converts the delta file to PSL, one record per delta alignment with exact match and mismatch counts, sorted by target and query position. nucmer with more than one thread finds the same alignments but writes them in a run-dependent order, so the published delta file can differ between runs; the PSL, and everything made from it, does not. The first line of the delta file names the two FASTA files (without their work directory path). To change the nucmer options, for example `--maxmatch` or a different `--minmatch`, set `ext.args` in a custom config:
+
+```groovy
+process {
+    withName: '.*:PAIRWISE_ALIGN:MUMMER4_NUCMER' {
+        ext.args = '--maxmatch -l 15'
+    }
+}
+```
+
+`nucmer` keeps a suffix array of the whole target in memory (about 16 bytes per target base on the yeast test pair); raise the memory of `MUMMER4_NUCMER` for large targets.
+
+To compare aligners on the same genomes, give the pair once per aligner, with different ids (see the [README](../README.md#aligners)). The genomes are prepared once; each row writes to its own `<outdir>/<id>/`. The Nextflow trace (`pipeline_info/execution_trace_*.txt`) has the run time and memory of each alignment task.
 
 ## Starting from an existing alignment (nf-core/pairgenomealign)
 
@@ -114,6 +151,20 @@ netChainSubset -verbose=0 T_Q.noClass.net T_Q.all.chain stdout | chainStitchId s
 ```
 
 They lift coordinates from the target genome to the query genome with UCSC `liftOver`. Use `--liftover false` to skip them.
+
+## Chaining large genomes (`--chain_chunk_size`)
+
+`axtChain` holds all the alignments of a pair in memory. For large, repeat-rich genomes that can be more than the machine has: aligning one common carp subgenome to the other (about 700 Mb each) with LASTZ makes about 100 MB of LAV output for every pair of chromosomes, homeologous or not, which would take several hundred GB in a single `axtChain`.
+
+With `--chain_chunk_size <bases>` the pipeline chains the alignments in tiles, as UCSC's own pipeline does for large genomes:
+
+1. The target and the query sequences are split into chunks, as for LASTZ: a sequence of at least `<bases>` is a chunk of its own, consecutive shorter ones are grouped up to that size. `--chain_chunk_size 1` makes every sequence a chunk.
+2. The PSL is split into one file per (target chunk, query chunk) with alignments (CONVERT_SPLITPSL, one pass over the PSL).
+3. `axtChain` runs on each tile, with the same options; `chainMergeSort` joins the tiles into `all.chain`.
+
+A chain only links blocks of one target sequence and one query sequence, so the tiles make the same chains as one `axtChain` over the pair (checked on the yeast test pair, `tests/chain_tiles.nf.test`). What changes is the order of chains with the same score: one `axtChain` orders them by its own internal order, `chainMergeSort` by tile. The chain IDs change with that order, and `chainNet` can pick a different one of two equal-scoring chains, so the nets and axt files may differ slightly. The default, `0`, runs one `axtChain` per pair and gives results identical to v1.0.0.
+
+The per-tile chain files are not published, so `chains/<target>_<query>.chain.gz` is missing; `all.chain` has all the chains. Each tile task asks for 6 GB of memory (12 GB on a retry, `conf/base.config`), a whole pair 36 GB. The number of tiles is the product of the target and query chunk counts: for scaffold-level assemblies, use a chunk size that groups the scaffolds (e.g. 10-50 Mb) rather than 1.
 
 ## lastal threads and reproducibility
 

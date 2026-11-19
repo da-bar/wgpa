@@ -33,6 +33,7 @@ workflow PIPELINE_INITIALISATION {
     outdir            //  string: The output directory where the results will be saved
     input             //  string: Path to input samplesheet
     preset            //  string: Default preset for pairs whose preset column is empty
+    aligner           //  string: Default aligner for pairs whose aligner column is empty
     help              // boolean: Display help message and exit
     help_full         // boolean: Show the full help message
     show_hidden       // boolean: Show hidden parameters in the help message
@@ -89,9 +90,10 @@ workflow PIPELINE_INITIALISATION {
 
     // One row per genome pair: [ meta, target_fasta, query_fasta, alignment ] with
     // meta = [ id, preset, target_name, query_name ], plus alignment_format ('maf' or 'psl') for a pair
-    // with an alignment input; alignment = [] for a pair that the pipeline aligns with LAST
+    // with an alignment input, or aligner ('lastz' or 'mummer') for a pair aligned with LASTZ or MUMmer4;
+    // alignment = [] for a pair that the pipeline aligns
     def pairs = samplesheetToList(input, "${projectDir}/assets/schema_input.json")
-        .collect { row -> createPairMeta(row, preset) }
+        .collect { row -> createPairMeta(row, preset, aligner) }
     validateInputSamplesheet(pairs)
 
     ch_samplesheet = channel.fromList(pairs)
@@ -159,9 +161,10 @@ def genomeName(fasta) {
 
 //
 // Build the pair meta map from a samplesheet row. Only a pair with an alignment input gets the key
-// alignment_format, so that the meta map (and hence the task hashes) of the other pairs is as before.
+// alignment_format, and only a pair aligned with LASTZ or MUMmer4 the key aligner, so that the meta map
+// (and hence the task hashes) of a LAST pair is as before.
 //
-def createPairMeta(row, default_preset) {
+def createPairMeta(row, default_preset, default_aligner) {
     def (meta, target, query, alignment) = row
     def pair_meta = [
         id          : meta.id,
@@ -170,8 +173,16 @@ def createPairMeta(row, default_preset) {
         query_name  : genomeName(query),
     ]
     if (alignment instanceof Path) {
+        // The aligner column is for pairs that the pipeline aligns; --aligner does not apply to this pair
+        if (meta.aligner) {
+            error("Please check input samplesheet -> pair '${meta.id}' has both an alignment and an aligner ('${meta.aligner}'): leave the aligner empty for a pair with an alignment input, or remove the alignment to align the pair with ${meta.aligner}")
+        }
         pair_meta.alignment_format = alignment.name ==~ /.*\.maf(\.gz)?/ ? 'maf' : 'psl'
         return [ pair_meta, target, query, alignment ]
+    }
+    def aligner = meta.aligner ?: default_aligner
+    if (aligner != 'last') {
+        pair_meta.aligner = aligner
     }
     return [ pair_meta, target, query, [] ]
 }
@@ -218,6 +229,7 @@ def toolCitationText() {
     def citation_text = [
             "Tools used in the workflow included:",
             "LAST (Kiełbasa et al. 2011),",
+            "LASTZ (Harris 2007) or MUMmer4 (Marçais et al. 2018) for pairs aligned with them,",
             "the UCSC kent utilities for chains and nets (Kent et al. 2003)",
             "with the alignment presets of CNEr (Tan et al. 2019)",
             "."
@@ -229,6 +241,8 @@ def toolCitationText() {
 def toolBibliographyText() {
     def reference_text = [
             "<li>Kiełbasa SM, Wan R, Sato K, Horton P, Frith MC (2011). Adaptive seeds tame genomic sequence comparison. Genome Research, 21(3), 487-493. doi: 10.1101/gr.113985.110</li>",
+            "<li>Harris RS (2007). Improved pairwise alignment of genomic DNA. PhD thesis, The Pennsylvania State University.</li>",
+            "<li>Marçais G, Delcher AL, Phillippy AM, Coston R, Salzberg SL, Zimin A (2018). MUMmer4: A fast and versatile genome alignment system. PLoS Computational Biology, 14(1), e1005944. doi: 10.1371/journal.pcbi.1005944</li>",
             "<li>Kent WJ, Baertsch R, Hinrichs A, Miller W, Haussler D (2003). Evolution's cauldron: duplication, deletion, and rearrangement in the mouse and human genomes. Proceedings of the National Academy of Sciences, 100(20), 11484-11489. doi: 10.1073/pnas.1932072100</li>",
             "<li>Tan G, Polychronopoulos D, Lenhard B (2019). CNEr: A toolkit for exploring extreme noncoding conservation. PLoS Computational Biology, 15(8), e1006940. doi: 10.1371/journal.pcbi.1006940</li>",
         ].join(' ').trim()

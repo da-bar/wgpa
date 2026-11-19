@@ -1,0 +1,77 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
+name: "mummer4_nucmer"
+description: Align a query genome to a target genome with MUMmer4 nucmer
+keywords:
+  - alignment
+  - whole-genome alignment
+  - mummer
+  - nucmer
+  - delta
+tools:
+  - mummer4:
+      description: |
+        MUMmer4 nucmer aligns DNA sequences from exact maximal matches, clustered and extended by dynamic
+        programming. The module runs nucmer with task.cpus threads and task.ext.args on plain or gzipped FASTA,
+        and replaces the absolute input paths in the first line of the delta file by the input file names.
+        With more than one thread the alignments come in a run-dependent order.
+      homepage: "https://mummer4.github.io/"
+      documentation: "https://mummer4.github.io/manual/manual.html"
+      tool_dev_url: "https://github.com/mummer4/mummer"
+      doi: "10.1371/journal.pcbi.1005944"
+      licence: ["Artistic-2.0"]
+      identifier: biotools:mummer4
+input:
+  - - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information
+          e.g. `[ id:'target_query' ]`
+    - target_fasta:
+        type: file
+        description: Target (reference) genome FASTA, plain or gzipped
+        pattern: "*.{fa,fasta,fna}{,.gz}"
+        ontologies:
+          - edam: http://edamontology.org/format_1929 # FASTA
+    - query_fasta:
+        type: file
+        description: Query genome FASTA, plain or gzipped
+        pattern: "*.{fa,fasta,fna}{,.gz}"
+        ontologies:
+          - edam: http://edamontology.org/format_1929 # FASTA
+output:
+  delta:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. `[ id:'target_query' ]`
+      - "*.delta.gz":
+          type: file
+          description: Gzipped nucmer delta file
+          pattern: "*.delta.gz"
+          ontologies: []
+  versions_mummer4:
+    - - ${task.process}:
+          type: string
+          description: The name of the process
+      - mummer4:
+          type: string
+          description: The name of the tool
+      - nucmer --version:
+          type: string
+          description: The expression to obtain the version of the tool
+topics:
+  versions:
+    - - ${task.process}:
+          type: string
+          description: The name of the process
+      - mummer4:
+          type: string
+          description: The name of the tool
+      - nucmer --version:
+          type: string
+          description: The expression to obtain the version of the tool
+authors:
+  - "@da-bar"
+maintainers:
+  - "@da-bar"

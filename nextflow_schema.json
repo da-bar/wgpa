@@ -52,6 +52,30 @@
                     "help_text": "The CNEr presets set the lastal and axtChain options and scoring matrices. `near` (lastal -a 600 -b 150 -e 3000, axtChain -minScore=5000 -linearGap=medium) is for closely related genomes (e.g. human-chimpanzee); `medium` (HOXD70 matrix; lastal -a 400 -b 30 -e 4500, axtChain -minScore=3000 -linearGap=medium) for e.g. human-mouse; `far` (HOXD55 matrix; lastal -a 400 -b 30 -e 6000, axtChain -minScore=5000 -linearGap=loose) for distant genomes (e.g. human-chicken). v1.0.0 always used `near`.",
                     "fa_icon": "fas fa-sliders-h"
                 },
+                "aligner": {
+                    "type": "string",
+                    "default": "last",
+                    "enum": ["last", "lastz", "mummer"],
+                    "description": "Default aligner for pairs whose samplesheet `aligner` column is empty.",
+                    "help_text": "`last` (lastdb -c, lastal, maf-convert psl; the v1.0.0 alignment), `lastz` (one lastz run per pair of target and query sequences with the CNEr lastz() options and matrix of the preset, then lavToPsl) or `mummer` (MUMmer4 nucmer with its default options for every preset, then delta to PSL). The chaining and netting are the same for every aligner. A pair with an `alignment` input is not aligned, whatever this parameter.",
+                    "fa_icon": "fas fa-align-left"
+                },
+                "lastz_chunk_size": {
+                    "type": "integer",
+                    "default": 10000000,
+                    "minimum": 1,
+                    "description": "Target bases per LASTZ task (pairs aligned with LASTZ).",
+                    "help_text": "LASTZ pairs are split into tasks by target sequence: a target sequence of at least this many bases is a task of its own, and consecutive shorter sequences (e.g. unplaced scaffolds) are grouped up to this many bases. Each task runs one lastz per (target sequence, query sequence), up to its cpus at a time. The tasks are joined back in target order, so the alignments do not depend on this value; it only sets how the work is spread over tasks.",
+                    "fa_icon": "fas fa-th"
+                },
+                "chain_chunk_size": {
+                    "type": "integer",
+                    "default": 0,
+                    "minimum": 0,
+                    "description": "Chain the alignments in tiles of up to this many target and query bases (0: one axtChain per pair).",
+                    "help_text": "axtChain holds all the alignments of a pair in memory, which for large repeat-rich genomes can be more than the machine has. With a value above 0 the PSL is split into tiles of target sequences x query sequences (a sequence of at least this many bases is a chunk of its own, consecutive shorter ones are grouped up to this size), each tile is chained separately and chainMergeSort joins them, as in UCSC's own pipeline. A chain never spans two sequence pairs, so the chains are the same; only the order of equal-scoring chains, and so the chain IDs and possibly the nets, differ from one axtChain over the whole pair. The per-tile chain files are not published (`all.chain` has them all). Keep 0 for results identical to v1.0.0.",
+                    "fa_icon": "fas fa-th-large"
+                },
                 "liftover": {
                     "type": "boolean",
                     "default": true,

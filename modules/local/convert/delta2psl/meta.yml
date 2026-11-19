@@ -1,0 +1,70 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
+name: "convert_delta2psl"
+description: Convert a MUMmer (nucmer) delta file to PSL, sorted by position
+keywords:
+  - delta
+  - psl
+  - conversion
+  - mummer
+tools:
+  - gawk:
+      description: |
+        GNU awk runs delta2psl.awk (next to the module), which writes one PSL record per delta alignment, with
+        the gapless blocks between indels, exact match and mismatch counts (mismatches = delta errors - gap
+        bases; no repMatches or nCount) and the query on the + or - strand. The records are sorted by target,
+        target position, query, query position and strand, so the PSL does not depend on the order of the
+        alignments in the delta file.
+      homepage: "https://www.gnu.org/software/gawk/"
+      documentation: "https://www.gnu.org/software/gawk/manual/"
+      tool_dev_url: "https://git.savannah.gnu.org/cgit/gawk.git"
+      licence: ["GPL-3.0-or-later"]
+      identifier: ""
+input:
+  - - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information
+          e.g. `[ id:'target_query' ]`
+    - delta:
+        type: file
+        description: nucmer delta file (NUCMER), plain or gzipped
+        pattern: "*.{delta,delta.gz}"
+        ontologies: []
+output:
+  psl:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. `[ id:'target_query' ]`
+      - "*.psl.gz":
+          type: file
+          description: Gzipped PSL alignments, sorted by position
+          pattern: "*.psl.gz"
+          ontologies:
+            - edam: http://edamontology.org/format_3007 # PSL
+  versions_gawk:
+    - - ${task.process}:
+          type: string
+          description: The name of the process
+      - gawk:
+          type: string
+          description: The name of the tool
+      - "awk -Wversion | sed '1!d; s/.*Awk //; s/,.*//'":
+          type: string
+          description: The expression to obtain the version of the tool
+topics:
+  versions:
+    - - ${task.process}:
+          type: string
+          description: The name of the process
+      - gawk:
+          type: string
+          description: The name of the tool
+      - "awk -Wversion | sed '1!d; s/.*Awk //; s/,.*//'":
+          type: string
+          description: The expression to obtain the version of the tool
+authors:
+  - "@da-bar"
+maintainers:
+  - "@da-bar"

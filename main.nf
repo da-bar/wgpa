@@ -40,6 +40,8 @@ workflow DABAR_WGPA {
         params.outdir,
         // With the strict syntax parser a CLI value such as '--liftover false' arrives as the string 'false'
         params.liftover.toString().toBoolean(),
+        params.lastz_chunk_size as long,
+        params.chain_chunk_size as long,
     )
 }
 /*
@@ -62,6 +64,7 @@ workflow {
         params.outdir,
         params.input,
         params.preset,
+        params.aligner,
         params.help,
         params.help_full,
         params.show_hidden

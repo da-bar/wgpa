@@ -1,0 +1,129 @@
+nextflow_process {
+
+    name "Test Process CONVERT_DELTA2PSL"
+    script "../main.nf"
+    process "CONVERT_DELTA2PSL"
+    tag "modules"
+    tag "modules_local"
+    tag "convert"
+    tag "convert/delta2psl"
+    tag "mummer4"
+
+    // tests/data/delta2psl: ref.fa (r1, 3000 bp of random sequence) and qry.fa, which holds r1 with 5 bp deleted
+    // after position 500, 3 bp inserted after position 1200 and a mismatch at position 2001 (qf), and the reverse
+    // complement of qf (qr). indels.delta is nucmer -t 1 of the two (MUMmer 4.0.1, first line made relative), and
+    // indels.psl its PSL, checked by hand and against the sequences: 3 blocks, 1 mismatch, one 3-base insert in
+    // the query and one 5-base insert in the target, on the + strand for qf and on the - strand for qr.
+
+    test("synthetic indels - both strands") {
+
+        when {
+            process {
+                """
+                input[0] = Channel.of([
+                    [ id:'indels' ], // meta map
+                    file("${projectDir}/tests/data/delta2psl/indels.delta", checkIfExists: true)
+                ])
+                """
+            }
+        }
+
+        then {
+            def psl = new java.util.zip.GZIPInputStream(new FileInputStream(process.out.psl[0][1].toString())).withCloseable { gz -> gz.getText('UTF-8') }
+            assertAll(
+                { assert process.success },
+                { assert snapshot(process.out).match() },
+                { assert psl == new File("${projectDir}/tests/data/delta2psl/indels.psl").text }
+            )
+        }
+    }
+
+    test("yeast_small - nucmer") {
+
+        // nucmer (1 thread) on the yeast_small fixtures. With more than one thread nucmer writes the same alignments
+        // in a run-dependent order; the PSL is sorted, so it does not depend on that order.
+
+        setup {
+            run("MUMMER4_NUCMER", alias: "NUCMER_1") {
+                script "../../../mummer4/nucmer/main.nf"
+                config "./nucmer_1.config"
+                process {
+                    """
+                    input[0] = Channel.of([
+                        [ id:'small' ], // meta map
+                        file("${projectDir}/tests/data/yeast_small/scer_small.fa", checkIfExists: true),
+                        file("${projectDir}/tests/data/yeast_small/seub_small.fa", checkIfExists: true)
+                    ])
+                    """
+                }
+            }
+        }
+
+        when {
+            process {
+                """
+                input[0] = NUCMER_1.out.delta
+                """
+            }
+        }
+
+        then {
+            def lines = new java.util.zip.GZIPInputStream(new FileInputStream(process.out.psl[0][1].toString())).withCloseable { gz -> gz.getText('UTF-8').readLines() }
+            def fields = lines.collect { line -> line.split('\t', -1) }
+            assertAll(
+                { assert process.success },
+                { assert snapshot(process.out).match() },
+                { assert lines.size() > 0 },
+                { assert fields.every { f -> f.size() == 21 } },
+                // Each record: matches + mismatches = aligned bases (sum of the block sizes)
+                { assert fields.every { f -> (f[0] as long) + (f[1] as long) == f[18].tokenize(',').sum { s -> s as long } } },
+                // Sorted by target name and start
+                { assert fields.collect { f -> [ f[13], f[15] as long ] } == fields.collect { f -> [ f[13], f[15] as long ] }.sort { a, b -> a[0] <=> b[0] ?: a[1] <=> b[1] } }
+            )
+        }
+    }
+
+    test("not a delta file - fails") {
+
+        when {
+            process {
+                """
+                input[0] = Channel.of([
+                    [ id:'small' ], // meta map
+                    file("${projectDir}/tests/data/yeast_small/small.psl", checkIfExists: true)
+                ])
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.failed },
+                { assert new File("${metaDir}/nextflow.log").text.contains('not a NUCMER delta file') }
+            )
+        }
+    }
+
+    test("synthetic indels - stub") {
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                input[0] = Channel.of([
+                    [ id:'indels' ], // meta map
+                    file("${projectDir}/tests/data/delta2psl/indels.delta", checkIfExists: true)
+                ])
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert snapshot(process.out).match() }
+            )
+        }
+    }
+}

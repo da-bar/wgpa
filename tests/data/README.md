@@ -20,6 +20,15 @@ Shared by all platforms:
   the target) and `seub_small` (3 _S. eubayanus_ chromosomes, the query).
 - `yeast_small/small.maf.gz`, `small.psl`: the v1.0.0 alignment of `scer_small` and `seub_small` (`lastdb -c`,
   `lastal`, `maf-convert psl`).
+- `delta2psl/ref.fa`, `qry.fa`, `indels.delta`, `indels.psl`: a synthetic pair for the delta-to-PSL converter of the
+  MUMmer4 aligner (`modules/local/convert/delta2psl`). `ref.fa` is 3000 bp of random sequence (`r1`); `qry.fa` holds
+  `r1` with 5 bp deleted after position 500, 3 bp inserted after position 1200 and one mismatch (`qf`), and its
+  reverse complement (`qr`). `indels.delta` is `nucmer -t 1` of the two (MUMmer 4.0.1; its first line made
+  relative) and `indels.psl` the expected PSL, checked against the sequences and with `pslCheck`.
+
+The PSL and delta outputs of the LASTZ and MUMmer4 aligners are in the nf-test snapshots, as the LAST MAF and PSL
+are: they were made on Linux x86_64 only, and are expected, but not yet checked, to be the same on other platforms.
+The chains and nets of LASTZ and MUMmer4 pairs have no platform references; the tests check that they are made.
 
 One folder per platform, `<platform>` being `darwin-arm64` or `linux-x86_64`:
 
